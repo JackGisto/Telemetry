@@ -1,0 +1,30 @@
+{
+  "id": "front_rear_imbalance",
+  "label": "Squilibrio anteriore/posteriore",
+  "description": "La forcella lavora molto mentre il posteriore resta bloccato in alto.",
+  "expectedDiagnoses": [
+    "front-rear-imbalance"
+  ],
+  "profile": {
+    "durationSec": 150,
+    "sampleRateHz": 100,
+    "hitsPerSec": 1.1,
+    "hitSizeMean": 0.26,
+    "hitSizeSpread": 2.0,
+    "seed": 5150,
+    "front": {
+      "totalTravelMm": 160,
+      "sag": 0.22,
+      "stiffness": 0.7,
+      "reboundDamping": 1.0,
+      "noiseMm": 0.25
+    },
+    "rear": {
+      "totalTravelMm": 60,
+      "sag": 0.16,
+      "stiffness": 2.2,
+      "reboundDamping": 1.0,
+      "noiseMm": 0.12
+    }
+  }
+}

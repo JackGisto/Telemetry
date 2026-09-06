@@ -1,0 +1,31 @@
+{
+  "id": "stiff_fork",
+  "label": "Forcella troppo rigida",
+  "description": "La forcella e sovra-pressurizzata: usa poca corsa e resta alta nel travel.",
+  "expectedDiagnoses": [
+    "insufficient-travel-use",
+    "suspension-riding-high"
+  ],
+  "profile": {
+    "durationSec": 150,
+    "sampleRateHz": 100,
+    "hitsPerSec": 1.1,
+    "hitSizeMean": 0.26,
+    "hitSizeSpread": 2.0,
+    "seed": 2024,
+    "front": {
+      "totalTravelMm": 160,
+      "sag": 0.1,
+      "stiffness": 1.95,
+      "reboundDamping": 1.0,
+      "noiseMm": 0.25
+    },
+    "rear": {
+      "totalTravelMm": 60,
+      "sag": 0.25,
+      "stiffness": 1.1,
+      "reboundDamping": 1.0,
+      "noiseMm": 0.12
+    }
+  }
+}

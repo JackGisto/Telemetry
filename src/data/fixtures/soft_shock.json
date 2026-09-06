@@ -1,0 +1,31 @@
+{
+  "id": "soft_shock",
+  "label": "Monoammortizzatore troppo morbido",
+  "description": "Il posteriore cede troppo e arriva spesso a fondo corsa.",
+  "expectedDiagnoses": [
+    "excessive-travel-use",
+    "frequent-bottom-out"
+  ],
+  "profile": {
+    "durationSec": 150,
+    "sampleRateHz": 100,
+    "hitsPerSec": 1.1,
+    "hitSizeMean": 0.26,
+    "hitSizeSpread": 2.0,
+    "seed": 4711,
+    "front": {
+      "totalTravelMm": 160,
+      "sag": 0.18,
+      "stiffness": 1.0,
+      "reboundDamping": 1.0,
+      "noiseMm": 0.25
+    },
+    "rear": {
+      "totalTravelMm": 60,
+      "sag": 0.38,
+      "stiffness": 0.6,
+      "reboundDamping": 1.0,
+      "noiseMm": 0.12
+    }
+  }
+}

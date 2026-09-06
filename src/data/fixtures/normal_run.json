@@ -1,0 +1,28 @@
+{
+  "id": "normal_run",
+  "label": "Run di riferimento",
+  "description": "Setup corretto per uno stile bilanciato: entrambe le sospensioni usano quasi tutta la corsa senza restare a fondo.",
+  "expectedDiagnoses": [],
+  "profile": {
+    "durationSec": 150,
+    "sampleRateHz": 100,
+    "hitsPerSec": 1.1,
+    "hitSizeMean": 0.26,
+    "hitSizeSpread": 2.0,
+    "seed": 1337,
+    "front": {
+      "totalTravelMm": 160,
+      "sag": 0.18,
+      "stiffness": 1.0,
+      "reboundDamping": 1.0,
+      "noiseMm": 0.25
+    },
+    "rear": {
+      "totalTravelMm": 60,
+      "sag": 0.25,
+      "stiffness": 1.1,
+      "reboundDamping": 1.0,
+      "noiseMm": 0.12
+    }
+  }
+}

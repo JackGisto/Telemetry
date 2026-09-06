@@ -1,0 +1,114 @@
+/**
+ * Design tokens.
+ *
+ * One dark, technical, high-contrast palette, tuned for a phone screen held in
+ * daylight on a trailhead: large type, strong contrast, no thin greys on the
+ * critical path. Every colour, radius and space used anywhere in the product
+ * comes from this file.
+ */
+:root {
+  /* --- Surfaces: near-black with a cool cast, not pure black --- */
+  --c-bg: #0b0e12;
+  --c-surface: #141920;
+  --c-surface-2: #1c232c;
+  --c-surface-3: #262f3a;
+  --c-border: #2c3644;
+  --c-border-strong: #3d4a5c;
+
+  /* --- Text --- */
+  --c-text: #f2f5f8;
+  --c-text-muted: #a3b0c0;
+  --c-text-faint: #6f7d8f;
+  --c-text-inverse: #0b0e12;
+
+  /* --- Brand: a single sharp accent, used sparingly --- */
+  --c-accent: #4cd9c0;
+  --c-accent-strong: #2bbfa6;
+  --c-accent-dim: rgba(76, 217, 192, 0.14);
+
+  /* --- Status. Never used alone: always paired with an icon or a label. --- */
+  --c-ok: #4ade80;
+  --c-ok-dim: rgba(74, 222, 128, 0.14);
+  --c-warn: #fbbf24;
+  --c-warn-dim: rgba(251, 191, 36, 0.14);
+  --c-danger: #f87171;
+  --c-danger-dim: rgba(248, 113, 113, 0.14);
+  --c-info: #60a5fa;
+  --c-info-dim: rgba(96, 165, 250, 0.14);
+
+  /* --- Data visualisation --- */
+  --c-front: #4cd9c0;
+  --c-rear: #a78bfa;
+  --c-grid: #232c37;
+
+  /* --- Typography --- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --fs-display: clamp(2.6rem, 8vw, 5rem);
+  --fs-h1: clamp(2rem, 5.5vw, 3rem);
+  --fs-h2: clamp(1.5rem, 3.6vw, 2rem);
+  --fs-h3: 1.25rem;
+  --fs-body: 1rem;
+  --fs-sm: 0.875rem;
+  --fs-xs: 0.75rem;
+
+  --lh-tight: 1.08;
+  --lh-snug: 1.3;
+  --lh-body: 1.6;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Wide tracking on the small uppercase labels that carry the technical tone */
+  --tracking-label: 0.12em;
+
+  /* --- Spacing: 4px base --- */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4rem;
+  --s-9: 6rem;
+
+  /* --- Radius --- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 26px;
+  --r-full: 999px;
+
+  /* --- Elevation --- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --shadow-accent: 0 8px 30px rgba(76, 217, 192, 0.22);
+
+  /* --- Motion: short, functional, never decorative --- */
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* --- Layout --- */
+  --page-max: 1160px;
+  --app-max: 560px;
+  --tabbar-h: 68px;
+  /* Minimum target size: usable with gloves on. */
+  --tap-min: 48px;
+}
+
+/* Respect the rider's OS preference; the product is legible either way. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
