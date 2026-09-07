@@ -26,6 +26,11 @@ Un push sul branch di sviluppo pubblica l'app su GitHub Pages tramite
 https://jackgisto.github.io/Telemetry/
 ```
 
+**Serve un passaggio manuale una volta sola:** su GitHub, `Settings` → `Pages` →
+`Source: GitHub Actions`. Il token di Actions non puo' abilitare Pages da solo,
+perche' creare il sito richiede permessi di amministratore del repository. Fatto
+quello, ogni push pubblica da solo.
+
 Il workflow esegue i test prima di pubblicare: una build rotta non arriva a chi
 sta provando l'app. Il percorso base non e' scritto a mano, arriva da
 `actions/configure-pages`, quindi regge anche se il repository viene rinominato.

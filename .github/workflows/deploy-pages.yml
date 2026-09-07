@@ -36,11 +36,13 @@ jobs:
       - name: Test
         run: npm test
 
+      # Pages must already be enabled on the repository, once, by an admin:
+      # Settings -> Pages -> Source: "GitHub Actions". The workflow token
+      # cannot switch it on by itself, because creating a Pages site needs
+      # admin rights that GITHUB_TOKEN does not carry.
       - name: Configura Pages
         id: pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Build
         # `base_path` comes back from configure-pages as the project subpath,
