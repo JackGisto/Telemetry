@@ -10,10 +10,17 @@ connessione e ripresa.
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173  → landing page; /app → applicazione
-npm test         # 95 test su motore, dati, trasporto, export e flussi UI
-npm run build    # build di produzione
+npm run dev            # http://localhost:5173 → landing page; /app → applicazione
+npm test               # 95 test su motore, dati, trasporto, export e flussi UI
+npm run build          # build di produzione
+npm run build:preview  # demo in un unico file HTML, apribile senza server
 ```
+
+`build:preview` produce `dist-preview/preview.html`: la stessa applicazione in un
+solo file autoconsistente, utile per condividere una demo. Rispetto alla build di
+produzione cambia solo il punto di ingresso (`src/preview-main.tsx`): il routing
+è tenuto in memoria, così le ancore `#` della landing page non entrano in
+conflitto con il router, e il service worker non viene registrato.
 
 ## Percorso completo senza hardware
 
