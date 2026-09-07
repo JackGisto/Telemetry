@@ -14,7 +14,32 @@ npm run dev            # http://localhost:5173 → landing page; /app → applic
 npm test               # 171 test su motore, dati, trasporto, export e flussi UI
 npm run build          # build di produzione
 npm run build:preview  # demo in un unico file HTML, apribile senza server
+npm run build:pages    # build per GitHub Pages (usa BASE_PATH)
 ```
+
+### Link pubblico per i tester
+
+Un push sul branch di sviluppo pubblica l'app su GitHub Pages tramite
+`.github/workflows/deploy-pages.yml`, all'indirizzo:
+
+```
+https://jackgisto.github.io/Telemetry/
+```
+
+Il workflow esegue i test prima di pubblicare: una build rotta non arriva a chi
+sta provando l'app. Il percorso base non e' scritto a mano, arriva da
+`actions/configure-pages`, quindi regge anche se il repository viene rinominato.
+
+Due dettagli necessari su un host statico senza regole di riscrittura:
+`404.html` e' una copia della shell, ed e' cio' che fa funzionare i link diretti
+come `/Telemetry/app/run`; `.nojekyll` evita che Pages passi l'output attraverso
+Jekyll.
+
+**Dal link pubblico si prova tutto con il dispositivo simulato, ma non il
+collegamento Wi-Fi all'hardware.** Il motivo e' la regola sul contenuto misto
+descritta piu' avanti: una pagina in HTTPS non puo' chiamare il dispositivo in
+HTTP. Per provare il Wi-Fi serve `npm run dev` sulla stessa rete del
+dispositivo.
 
 `build:preview` produce `dist-preview/preview.html`: la stessa applicazione in un
 solo file autoconsistente, utile per condividere una demo. Rispetto alla build di

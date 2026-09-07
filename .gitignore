@@ -7,3 +7,4 @@ coverage
 .vite
 dist-preview
 preview-artifact.html
+tsconfig.tsbuildinfo

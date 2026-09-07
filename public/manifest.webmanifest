@@ -2,8 +2,8 @@
   "name": "Telemetria MTB",
   "short_name": "Telemetria",
   "description": "Analisi delle sospensioni MTB: misura, analizza, regola.",
-  "start_url": "/app",
-  "scope": "/",
+  "start_url": "./app",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0b0e12",
@@ -11,7 +11,7 @@
   "lang": "it",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "./icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

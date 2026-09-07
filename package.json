@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false",
-    "build:preview": "vite build --config vite.preview.config.ts"
+    "build:preview": "vite build --config vite.preview.config.ts",
+    "build:pages": "tsc -b && vite build && node scripts/prepare-pages.mjs"
   },
   "dependencies": {
     "idb": "^8.0.0",

@@ -4,13 +4,22 @@
  * The app must work on a trailhead with no signal: the shell is precached on
  * install and served from cache first, while everything else falls back to the
  * network. Run data never goes through here — it lives in IndexedDB.
+ *
+ * Every path is derived from the worker's own scope rather than hardcoded to
+ * "/", so the same file works at the root and under a subpath such as a
+ * GitHub Pages project site.
  */
-const CACHE = 'mtb-telemetry-v1';
-const SHELL = ['/', '/app', '/index.html', '/manifest.webmanifest', '/icon.svg'];
+const CACHE = 'mtb-telemetry-v2';
+const BASE = new URL('./', self.location).pathname;
+const SHELL = [BASE, `${BASE}index.html`, `${BASE}manifest.webmanifest`, `${BASE}icon.svg`];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()),
+    caches
+      .open(CACHE)
+      // One missing entry must not abort the whole install.
+      .then((cache) => Promise.allSettled(SHELL.map((path) => cache.add(path))))
+      .then(() => self.skipWaiting()),
   );
 });
 
@@ -30,7 +39,9 @@ self.addEventListener('fetch', (event) => {
   // Navigations: serve the app shell so deep links work offline.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('/index.html').then((r) => r ?? Response.error())),
+      fetch(request).catch(() =>
+        caches.match(`${BASE}index.html`).then((r) => r ?? Response.error()),
+      ),
     );
     return;
   }

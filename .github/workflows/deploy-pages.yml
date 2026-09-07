@@ -1,0 +1,64 @@
+name: Deploy su GitHub Pages
+
+on:
+  push:
+    branches: [claude/mtb-telemetry-app-xl33fv]
+  # Lets the deploy be re-run by hand without pushing a commit.
+  workflow_dispatch:
+
+# The deploy needs to write Pages; nothing else needs write access.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a queued run supersedes a waiting one but never
+# cancels a deploy already in flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The app is published only if it typechecks and its tests pass: a broken
+      # build must not reach the people testing it.
+      - name: Test
+        run: npm test
+
+      - name: Configura Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Build
+        # `base_path` comes back from configure-pages as the project subpath,
+        # so this works unchanged if the repository is ever renamed.
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+        run: npm run build:pages
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
