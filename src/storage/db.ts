@@ -13,7 +13,9 @@ export interface AppSettings {
   mode: 'standard' | 'expert';
   onboardingCompleted: boolean;
   activeBikeId: string | null;
-  preferredTransport: 'mock' | 'ble';
+  preferredTransport: 'wifi' | 'ble' | 'mock';
+  /** Address of the acquisition unit on the network. Wi-Fi only. */
+  deviceOrigin: string;
   units: 'metric' | 'imperial';
 }
 
@@ -21,7 +23,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   mode: 'standard',
   onboardingCompleted: false,
   activeBikeId: null,
-  preferredTransport: 'mock',
+  preferredTransport: 'wifi',
+  deviceOrigin: 'http://192.168.4.1',
   units: 'metric',
 };
 

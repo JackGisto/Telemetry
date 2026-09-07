@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { IDBFactory } from 'fake-indexeddb';
 import { resetDbForTests } from '@/storage';
-import { MockTelemetryTransport } from '@/ble';
+import { MockTelemetryTransport } from '@/transport';
 import { AppRoutes } from './routes';
 import { useBikeStore, useDeviceStore, useHistoryStore, useSettingsStore } from './store';
 import { injectMockTransport } from './store/deviceStore';

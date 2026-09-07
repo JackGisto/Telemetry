@@ -30,6 +30,7 @@ function balanceMetrics(front: ComponentMetrics, rear: ComponentMetrics): Balanc
     travelUseDeltaPct: front.maxTravelPct - rear.maxTravelPct,
     bottomOutDelta: front.bottomOutCount - rear.bottomOutCount,
     reboundDeltaSec: front.velocity.meanRecoveryTimeSec - rear.velocity.meanRecoveryTimeSec,
+    rideHeightDeltaPct: front.rideHeightPct - rear.rideHeightPct,
   };
 }
 

@@ -119,7 +119,7 @@ function Problem() {
 
 const STEPS = [
   { n: '01', title: 'Installa i sensori', body: 'Sulla forcella e, se c’è, sull’ammortizzatore.' },
-  { n: '02', title: 'Collega il dispositivo', body: 'Bluetooth, dall’app, in pochi secondi.' },
+  { n: '02', title: 'Collega il dispositivo', body: 'Via Wi-Fi, dal telefono, in pochi secondi.' },
   { n: '03', title: 'Fai una run', body: 'Premi start e guida normalmente.' },
   { n: '04', title: 'L’app analizza', body: 'I dati vengono elaborati sul telefono.' },
   { n: '05', title: 'Ricevi i consigli', body: 'Modifiche concrete, in ordine di priorità.' },
@@ -183,6 +183,19 @@ function Analysis() {
             <div className="lp-tile__label">Tempo di ritorno</div>
             <p className="lp-tile__body">
               Quanto ci mette la sospensione a tornare estesa dopo un colpo. È il rebound, misurato.
+            </p>
+          </div>
+
+          <div className="lp-tile">
+            <div className="lp-tile__value">
+              <span style={{ color: 'var(--c-accent)' }}>LS</span>
+              <span className="faint"> / </span>
+              <span style={{ color: 'var(--c-warn)' }}>HS</span>
+            </div>
+            <div className="lp-tile__label">Basse e alte velocità</div>
+            <p className="lp-tile__body">
+              Il sostegno in curva e la durezza sui colpi secchi si regolano con manopole diverse.
+              L’app li misura separatamente e ti dice quale toccare.
             </p>
           </div>
 
@@ -278,6 +291,7 @@ function Modes() {
               <li>Un verdetto per forcella, posteriore e bilanciamento.</li>
               <li>Al massimo tre modifiche, in ordine di priorità.</li>
               <li>Nessun numero da interpretare.</li>
+              <li>Una “i” accanto a ogni termine, con la spiegazione in parole semplici.</li>
             </ul>
           </div>
           <div className="lp-mode">
@@ -286,7 +300,8 @@ function Modes() {
               Modalità Esperto, un tocco per attivarla.
             </p>
             <ul className="lp-mode__list">
-              <li>Posizione nel tempo, distribuzione del travel, velocità.</li>
+              <li>Posizione nel tempo, distribuzione del travel e delle velocità di stelo.</li>
+              <li>Altezza di marcia, ripartizione tra basse e alte velocità.</li>
               <li>Metriche complete e ogni diagnosi con la sua soglia.</li>
               <li>Confronto tra run, dati grezzi ed export CSV e JSON.</li>
             </ul>
@@ -307,6 +322,11 @@ function Compatibility() {
           L’app è pensata per il sistema di telemetria dedicato: unità di acquisizione e sensori
           lineari sulla forcella e, quando presente, sull’ammortizzatore posteriore. Funziona anche
           su hardtail: senza mono, l’app nasconde tutto ciò che riguarda il posteriore.
+        </p>
+        <p className="lp-section__lead">
+          Dichiari tu quali regolazioni ha la tua sospensione, comprese le separazioni tra basse e
+          alte velocità. L’app non consiglierà mai una manopola che non hai: se non c’è nulla da
+          girare, te lo dice invece di inventarsi una modifica.
         </p>
         <p className="lp-section__lead">
           Non dichiariamo compatibilità con altri sistemi di telemetria o sensori di terze parti.

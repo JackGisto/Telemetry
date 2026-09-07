@@ -6,7 +6,7 @@ import type {
   TransferProgress,
   TransportKind,
 } from '@/types';
-import { TransportError, type TelemetryTransport } from '../transport/types';
+import { TransportError, type TelemetryTransport } from '../core/types';
 import { DEFAULT_CHUNK_BYTES } from '../protocol/gatt';
 import { MockTelemetryDevice, type MockDeviceOptions } from './MockTelemetryDevice';
 

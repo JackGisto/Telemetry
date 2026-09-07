@@ -80,3 +80,22 @@ describe('export CSV di riepilogo', () => {
     expect(summaryToCsv(withNotes, report)).toContain('"Mono +5 PSI, trail asciutto"');
   });
 });
+
+describe('export delle metriche di smorzamento', () => {
+  it('include altezza di marcia e ripartizione per banda di velocità', () => {
+    const csv = summaryToCsv(session, report);
+    expect(csv).toMatch(/metrics,front_ride_height_pct,/);
+    expect(csv).toMatch(/metrics,front_high_speed_compression_share,/);
+    expect(csv).toMatch(/metrics,front_low_speed_rebound_share,/);
+    expect(csv).toMatch(/metrics,rear_ride_height_pct,/);
+  });
+
+  it('conserva le nuove metriche nel round-trip JSON', () => {
+    const parsed = parseJson(toJson(session, report));
+    expect(parsed.report?.metrics.front.rideHeightPct).toBeCloseTo(
+      report.metrics.front.rideHeightPct,
+      6,
+    );
+    expect(parsed.report?.metrics.front.velocity.histogram.length).toBeGreaterThan(0);
+  });
+});

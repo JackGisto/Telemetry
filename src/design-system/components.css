@@ -326,3 +326,73 @@
 .center { text-align: center; }
 
 .divider { height: 1px; background: var(--c-border); border: 0; margin: 0; }
+
+/* ---------- Info affordance ---------- */
+/*
+  A small "i" that opens a plain-language explanation. It sits next to anything
+  a rider new to suspension setup would not be expected to know, so it has to be
+  unmistakably tappable without competing with the value it annotates.
+*/
+.info-btn {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: var(--r-full);
+  border: 1px solid var(--c-border-strong);
+  background: var(--c-surface-2);
+  color: var(--c-text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease),
+    background var(--t-fast) var(--ease);
+}
+.info-btn:hover {
+  color: var(--c-accent);
+  border-color: var(--c-accent);
+  background: var(--c-accent-dim);
+}
+
+/*
+  The tap target is enlarged past the visible circle so it stays usable with
+  gloves on, without the ring itself becoming visually heavy.
+*/
+.info-btn::after {
+  content: '';
+  position: absolute;
+  width: 44px;
+  height: 44px;
+}
+.info-btn { position: relative; }
+
+/* A label with its info button, used wherever a term needs explaining. */
+.info-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* Explanation body inside the modal. */
+.info-body { font-size: var(--fs-sm); line-height: var(--lh-body); }
+.info-body p { margin-bottom: var(--s-3); }
+.info-tip {
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--c-accent-dim);
+  border: 1px solid var(--c-accent);
+  font-size: var(--fs-sm);
+}
+.info-tip__label {
+  display: block;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--c-accent);
+  font-weight: var(--fw-semibold);
+  margin-bottom: var(--s-1);
+}

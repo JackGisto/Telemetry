@@ -4,6 +4,7 @@ import type { AnalysisReport, Session } from '@/types';
 import { Button, Card, ComparisonBars, ErrorState, LoadingState } from '@/design-system';
 import { ScreenHeader } from '@/app/AppShell';
 import { useHistoryStore } from '@/app/store';
+import { TermInfo } from '@/features/help/TermInfo';
 import { formatDateTime } from '@/features/analysis/presentation';
 import { buildComparisonRows, buildSetupChanges, verdictSentence } from './comparison';
 
@@ -68,7 +69,10 @@ export function ComparePage() {
 
       <div className="stack stack--4">
         <Card className="stack stack--2">
-          <span className="ds-label">Esito</span>
+          <span className="info-label">
+            <span className="ds-label">Esito</span>
+            <TermInfo id="score" />
+          </span>
           <strong style={{ fontSize: 'var(--fs-h3)' }}>{verdictSentence(a.report, b.report)}</strong>
           <span className="text-sm muted">
             Score {a.report.scores.overall} → {b.report.scores.overall}

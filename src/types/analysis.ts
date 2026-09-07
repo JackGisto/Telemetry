@@ -9,6 +9,37 @@ export interface TravelHistogramBin {
   fraction: number;
 }
 
+/**
+ * One bin of the shaft-velocity distribution.
+ *
+ * Negative velocities are rebound, positive are compression, both in mm/s.
+ * This is the standard way damping is read in suspension work: the shape of
+ * this distribution says far more than any single average.
+ */
+export interface VelocityHistogramBin {
+  /** Inclusive lower bound in mm/s. Negative means rebound. */
+  fromMmS: number;
+  /** Exclusive upper bound in mm/s. */
+  toMmS: number;
+  /** Fraction of the moving samples in this bin, 0..1. */
+  fraction: number;
+}
+
+/**
+ * Damping behaviour split by shaft speed.
+ *
+ * Low-speed motion is rider input and terrain undulation: it governs support
+ * and ride height. High-speed motion is sharp impacts: it governs harshness and
+ * bottom-out resistance. They are controlled by different adjusters, so the
+ * engine has to judge them separately.
+ */
+export interface SpeedBandStats {
+  /** Mean magnitude in the band, mm/s. */
+  mean: number;
+  /** Fraction of moving samples that fall in this band, 0..1. */
+  fraction: number;
+}
+
 export interface VelocityStats {
   /** mm/s, positive numbers. */
   meanCompression: number;
@@ -22,6 +53,12 @@ export interface VelocityStats {
    * that peak. The primary rebound-damping indicator.
    */
   meanRecoveryTimeSec: number;
+  /** Distribution of shaft velocity, rebound (negative) to compression. */
+  histogram: VelocityHistogramBin[];
+  lowSpeedCompression: SpeedBandStats;
+  highSpeedCompression: SpeedBandStats;
+  lowSpeedRebound: SpeedBandStats;
+  highSpeedRebound: SpeedBandStats;
 }
 
 export interface ComponentMetrics {
@@ -31,6 +68,13 @@ export interface ComponentMetrics {
   maxTravelPct: number;
   meanTravelMm: number;
   meanTravelPct: number;
+  /**
+   * Dynamic ride height: where the suspension actually settles while riding,
+   * as % of travel. Taken from the quiet samples only, so a few big hits do not
+   * drag it down the way `meanTravelPct` is dragged. This is the metric that
+   * corresponds to sag once the bike is moving.
+   */
+  rideHeightPct: number;
   /** Travel below which the unit spends 95% of the run. */
   p95TravelPct: number;
   histogram: TravelHistogramBin[];
@@ -53,6 +97,8 @@ export interface BalanceMetrics {
   bottomOutDelta: number;
   /** frontRecovery - rearRecovery in seconds. */
   reboundDeltaSec: number;
+  /** frontRideHeight - rearRideHeight, in percentage points. */
+  rideHeightDeltaPct: number;
 }
 
 export interface SessionMetrics {
@@ -72,6 +118,9 @@ export type DiagnosisId =
   | 'suspension-riding-low'
   | 'rebound-too-fast'
   | 'rebound-too-slow'
+  | 'harsh-on-impacts'
+  | 'lacks-low-speed-support'
+  | 'packing-down'
   | 'front-rear-imbalance'
   | 'inconsistent-with-style';
 
@@ -92,10 +141,23 @@ export interface Diagnosis {
   description: string;
 }
 
+/** Which adjuster a click-based recommendation targets. */
+export type DampingCircuit = 'low-speed' | 'high-speed' | 'single';
+
 export type RecommendationAction =
   | { kind: 'pressure'; component: SuspensionComponent; deltaPsi: number }
-  | { kind: 'rebound'; component: SuspensionComponent; deltaClicks: number }
-  | { kind: 'compression'; component: SuspensionComponent; deltaClicks: number }
+  | {
+      kind: 'rebound';
+      component: SuspensionComponent;
+      deltaClicks: number;
+      circuit: DampingCircuit;
+    }
+  | {
+      kind: 'compression';
+      component: SuspensionComponent;
+      deltaClicks: number;
+      circuit: DampingCircuit;
+    }
   | { kind: 'preload'; component: SuspensionComponent; deltaTurns: number }
   | { kind: 'spring-rate'; component: SuspensionComponent; direction: 'softer' | 'stiffer' }
   | { kind: 'explain'; component: SuspensionComponent | 'system' };

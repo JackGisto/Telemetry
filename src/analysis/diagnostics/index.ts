@@ -181,6 +181,80 @@ function reboundRules(m: ComponentMetrics, ctx: DiagnosticContext): Diagnosis[] 
   return out;
 }
 
+/**
+ * Damping rules read from the speed-split distribution.
+ *
+ * These separate what a single "compression" verdict cannot: a suspension can
+ * be perfectly supported under rider input and still be harsh over sharp
+ * impacts, because the two are governed by different circuits.
+ */
+function dampingRules(m: ComponentMetrics, ctx: DiagnosticContext): Diagnosis[] {
+  const out: Diagnosis[] = [];
+  const label = LABEL[m.component];
+  const v = m.velocity;
+  // Too little movement to say anything about damping.
+  if (m.compressionEvents < 5) return out;
+
+  const hsc = v.highSpeedCompression.fraction;
+  if (hsc > ctx.tunables.highSpeedCompressionMax) {
+    const error = hsc - ctx.tunables.highSpeedCompressionMax;
+    out.push({
+      id: 'harsh-on-impacts',
+      component: m.component,
+      severity: severityFromError(error, 0.07),
+      confidence: confidence(ctx.baseConfidence, error, 0.07),
+      metric: 'highSpeedCompressionFraction',
+      metricValue: round(hsc, 3),
+      threshold: ctx.tunables.highSpeedCompressionMax,
+      description: `${label} affronta molti colpi secchi ad alta velocità di stelo: sui tratti rotti risulta dura.`,
+    });
+  }
+
+  const lsr = v.lowSpeedRebound.fraction;
+  const reboundTotal = lsr + v.highSpeedRebound.fraction;
+  if (reboundTotal > 0.1 && lsr / reboundTotal < ctx.tunables.lowSpeedReboundMin) {
+    const error = ctx.tunables.lowSpeedReboundMin - lsr / reboundTotal;
+    out.push({
+      id: 'packing-down',
+      component: m.component,
+      severity: severityFromError(error, 0.1),
+      confidence: confidence(ctx.baseConfidence, error, 0.1),
+      metric: 'lowSpeedReboundShare',
+      metricValue: round(lsr / reboundTotal, 3),
+      threshold: ctx.tunables.lowSpeedReboundMin,
+      description: `${label} non fa in tempo a riestendersi tra un colpo e l'altro e si siede progressivamente nella corsa.`,
+    });
+  }
+
+  return out;
+}
+
+/**
+ * Dynamic ride height.
+ *
+ * Only the "sitting too deep" case is reported here. Riding high is already
+ * covered by the mean-travel rule, and raising it twice from two signals would
+ * just double the same advice.
+ */
+function rideHeightRules(m: ComponentMetrics, ctx: DiagnosticContext): Diagnosis[] {
+  if (m.compressionEvents < 5) return [];
+  const error = bandError(m.rideHeightPct, ctx.style.rideHeightPct);
+  if (error <= 0) return [];
+
+  return [
+    {
+      id: 'lacks-low-speed-support',
+      component: m.component,
+      severity: severityFromError(error, 5),
+      confidence: confidence(ctx.baseConfidence, error, 5),
+      metric: 'rideHeightPct',
+      metricValue: round(m.rideHeightPct, 1),
+      threshold: ctx.style.rideHeightPct[1],
+      description: `${LABEL[m.component]} viaggia seduto al ${Math.round(m.rideHeightPct)}% della corsa: manca sostegno alle basse velocità e la bici perde geometria.`,
+    },
+  ];
+}
+
 /** System-level rules: front against rear. */
 function balanceRules(ctx: DiagnosticContext): Diagnosis[] {
   const { balance } = ctx.metrics;
@@ -264,6 +338,8 @@ export function runDiagnostics(ctx: DiagnosticContext): Diagnosis[] {
     ...travelRules(m, ctx),
     ...bottomOutRules(m, ctx),
     ...reboundRules(m, ctx),
+    ...dampingRules(m, ctx),
+    ...rideHeightRules(m, ctx),
   ];
 
   const found = [

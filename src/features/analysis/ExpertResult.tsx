@@ -1,8 +1,19 @@
 import { useState } from 'react';
 import type { AnalysisReport, ComponentMetrics, Session } from '@/types';
-import { Badge, BandMeter, Card, TravelHistogramChart, TravelTimeChart, VelocityChart } from '@/design-system';
+import {
+  Badge,
+  BandMeter,
+  Card,
+  SpeedBandBar,
+  TravelHistogramChart,
+  TravelTimeChart,
+  VelocityChart,
+  VelocityHistogramChart,
+} from '@/design-system';
 import { DEFAULT_TUNABLES } from '@/analysis';
-import { SEVERITY_LABEL, SEVERITY_TONE } from './presentation';
+import type { GlossaryId } from '@/features/help/glossary';
+import { TermInfo } from '@/features/help/TermInfo';
+import { DIAGNOSIS_LABEL, SEVERITY_LABEL, SEVERITY_TONE } from './presentation';
 
 type Tab = 'grafici' | 'metriche' | 'diagnosi' | 'dati';
 
@@ -42,7 +53,10 @@ export function ExpertResult({ session, report }: { session: Session; report: An
       {tab === 'grafici' && (
         <div className="stack stack--4">
           <Card>
-            <h3 className="card__title">Posizione nel tempo</h3>
+            <h3 className="card__title info-label">
+              <span>Posizione nel tempo</span>
+              <TermInfo id="travel" />
+            </h3>
             <p className="text-sm muted" style={{ marginBottom: 'var(--s-3)' }}>
               Percentuale di corsa usata. La linea rossa è la soglia di fondo corsa.
             </p>
@@ -54,7 +68,10 @@ export function ExpertResult({ session, report }: { session: Session; report: An
           </Card>
 
           <Card>
-            <h3 className="card__title">Distribuzione del travel</h3>
+            <h3 className="card__title info-label">
+              <span>Distribuzione del travel</span>
+              <TermInfo id="travel-distribution" />
+            </h3>
             <p className="text-sm muted" style={{ marginBottom: 'var(--s-3)' }}>
               Quanto tempo la sospensione passa in ogni zona della corsa.
             </p>
@@ -62,7 +79,50 @@ export function ExpertResult({ session, report }: { session: Session; report: An
           </Card>
 
           <Card>
-            <h3 className="card__title">Velocità</h3>
+            <h3 className="card__title info-label">
+              <span>Distribuzione delle velocità</span>
+              <TermInfo id="velocity-distribution" />
+            </h3>
+            <p className="text-sm muted" style={{ marginBottom: 'var(--s-3)' }}>
+              Quanto tempo lo stelo passa a ogni velocità. A sinistra dello zero il ritorno, a
+              destra la compressione. Le barre in tinta scura sono le alte velocità, quelle dei
+              colpi secchi, governate da regolazioni diverse.
+            </p>
+            <VelocityHistogramChart
+              front={front}
+              rear={rear}
+              splitMmS={DEFAULT_TUNABLES.velocitySplitMmS}
+            />
+          </Card>
+
+          <Card className="stack stack--4">
+            <div>
+              <h3 className="card__title info-label">
+                <span>Ripartizione del movimento</span>
+                <TermInfo id="speed-split" />
+              </h3>
+              <p className="text-sm muted">
+                Basse e alte velocità sono governate da regolazioni diverse, per questo l’analisi le
+                valuta separatamente.
+              </p>
+            </div>
+            <div className="stack stack--2">
+              <span className="ds-label">Forcella</span>
+              <SpeedBandBar metrics={front} />
+            </div>
+            {rear && (
+              <div className="stack stack--2">
+                <span className="ds-label">Posteriore</span>
+                <SpeedBandBar metrics={rear} />
+              </div>
+            )}
+          </Card>
+
+          <Card>
+            <h3 className="card__title info-label">
+              <span>Velocità medie e di picco</span>
+              <TermInfo id="shaft-velocity" />
+            </h3>
             <p className="text-sm muted" style={{ marginBottom: 'var(--s-3)' }}>
               Velocità di compressione e di ritorno dello stelo.
             </p>
@@ -77,13 +137,30 @@ export function ExpertResult({ session, report }: { session: Session; report: An
             <h3 className="card__title" style={{ margin: 0 }}>
               Forcella
             </h3>
-            <BandMeter label="Corsa massima usata" value={front.maxTravelPct} band={style.front.maxTravelPct} />
-            <BandMeter label="Corsa media usata" value={front.meanTravelPct} band={style.front.meanTravelPct} />
+            <BandMeter
+              label="Corsa massima usata"
+              value={front.maxTravelPct}
+              band={style.front.maxTravelPct}
+              info={<TermInfo id="travel-max" />}
+            />
+            <BandMeter
+              label="Corsa media usata"
+              value={front.meanTravelPct}
+              band={style.front.meanTravelPct}
+              info={<TermInfo id="travel-mean" />}
+            />
+            <BandMeter
+              label="Altezza di marcia"
+              value={front.rideHeightPct}
+              band={style.rideHeightPct}
+              info={<TermInfo id="ride-height" />}
+            />
             <BandMeter
               label="Tempo di ritorno"
               value={front.velocity.meanRecoveryTimeSec}
               band={style.recoveryTimeSec}
               unit=" s"
+              info={<TermInfo id="recovery-time" />}
             />
             <MetricGrid metrics={front} />
           </Card>
@@ -93,13 +170,30 @@ export function ExpertResult({ session, report }: { session: Session; report: An
               <h3 className="card__title" style={{ margin: 0 }}>
                 Posteriore
               </h3>
-              <BandMeter label="Corsa massima usata" value={rear.maxTravelPct} band={style.rear.maxTravelPct} />
-              <BandMeter label="Corsa media usata" value={rear.meanTravelPct} band={style.rear.meanTravelPct} />
+              <BandMeter
+                label="Corsa massima usata"
+                value={rear.maxTravelPct}
+                band={style.rear.maxTravelPct}
+                info={<TermInfo id="travel-max" />}
+              />
+              <BandMeter
+                label="Corsa media usata"
+                value={rear.meanTravelPct}
+                band={style.rear.meanTravelPct}
+                info={<TermInfo id="travel-mean" />}
+              />
+              <BandMeter
+                label="Altezza di marcia"
+                value={rear.rideHeightPct}
+                band={style.rideHeightPct}
+                info={<TermInfo id="ride-height" />}
+              />
               <BandMeter
                 label="Tempo di ritorno"
                 value={rear.velocity.meanRecoveryTimeSec}
                 band={style.recoveryTimeSec}
                 unit=" s"
+                info={<TermInfo id="recovery-time" />}
               />
               <MetricGrid metrics={rear} />
             </Card>
@@ -135,8 +229,11 @@ export function ExpertResult({ session, report }: { session: Session; report: An
             report.diagnoses.map((d, i) => (
               <div key={`${d.id}-${d.component}-${i}`} className="stack stack--2">
                 <div className="row row--between">
-                  <strong className="text-sm">{d.id}</strong>
-                  <Badge tone={SEVERITY_TONE[d.severity]}>{SEVERITY_LABEL[d.severity]}</Badge>
+                  <strong className="text-sm">{DIAGNOSIS_LABEL[d.id] ?? d.id}</strong>
+                  <span className="info-label">
+                    <Badge tone={SEVERITY_TONE[d.severity]}>{SEVERITY_LABEL[d.severity]}</Badge>
+                    <TermInfo id="severity" />
+                  </span>
                 </div>
                 <p className="text-sm">{d.description}</p>
                 <div className="text-xs faint ds-mono">
@@ -191,27 +288,49 @@ export function ExpertResult({ session, report }: { session: Session; report: An
 function MetricGrid({ metrics }: { metrics: ComponentMetrics }) {
   return (
     <div className="metric-grid">
-      <Metric label="Corsa max" value={`${metrics.maxTravelMm.toFixed(1)} mm`} />
-      <Metric label="Corsa max %" value={`${metrics.maxTravelPct.toFixed(1)}%`} />
-      <Metric label="Corsa media" value={`${metrics.meanTravelPct.toFixed(1)}%`} />
-      <Metric label="P95 corsa" value={`${metrics.p95TravelPct.toFixed(1)}%`} />
-      <Metric label="Fondo corsa" value={String(metrics.bottomOutCount)} />
-      <Metric label="Tempo a fondo" value={`${(metrics.timeNearBottom * 100).toFixed(1)}%`} />
-      <Metric label="Tempo in alto" value={`${(metrics.timeNearTop * 100).toFixed(1)}%`} />
-      <Metric label="Top-out" value={String(metrics.topOutCount)} />
-      <Metric label="Compressioni" value={String(metrics.compressionEvents)} />
-      <Metric label="Compr. media" value={`${metrics.velocity.meanCompression.toFixed(0)} mm/s`} />
-      <Metric label="Ritorno medio" value={`${metrics.velocity.meanRebound.toFixed(0)} mm/s`} />
+      <Metric label="Corsa max" value={`${metrics.maxTravelMm.toFixed(1)} mm`} info="travel-max" />
+      <Metric label="Corsa max %" value={`${metrics.maxTravelPct.toFixed(1)}%`} info="travel-max" />
+      <Metric label="Corsa media" value={`${metrics.meanTravelPct.toFixed(1)}%`} info="travel-mean" />
+      <Metric label="Altezza di marcia" value={`${metrics.rideHeightPct.toFixed(1)}%`} info="ride-height" />
+      <Metric label="P95 corsa" value={`${metrics.p95TravelPct.toFixed(1)}%`} info="percentile" />
+      <Metric label="Fondo corsa" value={String(metrics.bottomOutCount)} info="bottom-out" />
+      <Metric label="Tempo a fondo" value={`${(metrics.timeNearBottom * 100).toFixed(1)}%`} info="time-near-bottom" />
+      <Metric label="Tempo in alto" value={`${(metrics.timeNearTop * 100).toFixed(1)}%`} info="time-near-top" />
+      <Metric label="Top-out" value={String(metrics.topOutCount)} info="top-out" />
+      <Metric label="Compressioni" value={String(metrics.compressionEvents)} info="compression-events" />
+      <Metric label="Compr. media" value={`${metrics.velocity.meanCompression.toFixed(0)} mm/s`} info="shaft-velocity" />
+      <Metric label="Ritorno medio" value={`${metrics.velocity.meanRebound.toFixed(0)} mm/s`} info="rebound" />
       <Metric label="Ritorno p95" value={`${metrics.velocity.p95Rebound.toFixed(0)} mm/s`} />
+      <Metric
+        label="Compr. alta vel."
+        value={`${(metrics.velocity.highSpeedCompression.fraction * 100).toFixed(0)}%`}
+        info="high-speed"
+      />
+      <Metric
+        label="Ritorno bassa vel."
+        value={`${(metrics.velocity.lowSpeedRebound.fraction * 100).toFixed(0)}%`}
+        info="low-speed"
+      />
     </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  info,
+}: {
+  label: string;
+  value: string;
+  info?: GlossaryId;
+}) {
   return (
     <div className="metric">
       <div className="metric__value">{value}</div>
-      <div className="metric__label">{label}</div>
+      <div className="metric__label info-label">
+        <span>{label}</span>
+        {info && <TermInfo id={info} />}
+      </div>
     </div>
   );
 }

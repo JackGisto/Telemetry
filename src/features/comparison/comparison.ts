@@ -36,6 +36,22 @@ export function buildComparisonRows(a: AnalysisReport, b: AnalysisReport): Compa
       decimals: 1,
     },
     {
+      label: 'Forcella · altezza marcia',
+      a: a.metrics.front.rideHeightPct,
+      b: b.metrics.front.rideHeightPct,
+      unit: '%',
+      better: 'neutral',
+      decimals: 1,
+    },
+    {
+      label: 'Forcella · colpi veloci',
+      a: a.metrics.front.velocity.highSpeedCompression.fraction * 100,
+      b: b.metrics.front.velocity.highSpeedCompression.fraction * 100,
+      unit: '%',
+      better: 'neutral',
+      decimals: 1,
+    },
+    {
       label: 'Forcella · fondo corsa',
       a: a.metrics.front.bottomOutCount,
       b: b.metrics.front.bottomOutCount,
@@ -69,6 +85,14 @@ export function buildComparisonRows(a: AnalysisReport, b: AnalysisReport): Compa
         label: 'Posteriore · corsa max',
         a: a.metrics.rear.maxTravelPct,
         b: b.metrics.rear.maxTravelPct,
+        unit: '%',
+        better: 'neutral',
+        decimals: 1,
+      },
+      {
+        label: 'Posteriore · altezza marcia',
+        a: a.metrics.rear.rideHeightPct,
+        b: b.metrics.rear.rideHeightPct,
         unit: '%',
         better: 'neutral',
         decimals: 1,
@@ -121,6 +145,16 @@ export function buildSetupChanges(a: Session, b: Session): SetupChange[] {
     a.setupSnapshot.frontSuspension.compression.clicks,
     b.setupSnapshot.frontSuspension.compression.clicks,
   );
+  push(
+    'Forcella · compressione HS',
+    a.setupSnapshot.frontSuspension.highSpeedCompression?.clicks,
+    b.setupSnapshot.frontSuspension.highSpeedCompression?.clicks,
+  );
+  push(
+    'Forcella · ritorno HS',
+    a.setupSnapshot.frontSuspension.highSpeedRebound?.clicks,
+    b.setupSnapshot.frontSuspension.highSpeedRebound?.clicks,
+  );
 
   const rearA = a.setupSnapshot.rearSuspension;
   const rearB = b.setupSnapshot.rearSuspension;
@@ -128,6 +162,8 @@ export function buildSetupChanges(a: Session, b: Session): SetupChange[] {
     push('Mono · pressione', rearA.pressurePsi, rearB.pressurePsi);
     push('Mono · rebound', rearA.rebound.clicks, rearB.rebound.clicks);
     push('Mono · compressione', rearA.compression.clicks, rearB.compression.clicks);
+    push('Mono · compressione HS', rearA.highSpeedCompression?.clicks, rearB.highSpeedCompression?.clicks);
+    push('Mono · ritorno HS', rearA.highSpeedRebound?.clicks, rearB.highSpeedRebound?.clicks);
   }
 
   push('Stile di guida', a.setupSnapshot.rider.style, b.setupSnapshot.rider.style);

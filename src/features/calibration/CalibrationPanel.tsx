@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { CalibrationResult } from '@/types';
 import { Button, Card, Progress, useToast } from '@/design-system';
-import { errorMessage } from '@/ble';
+import { errorMessage } from '@/transport';
 import { useBikeStore, useDeviceStore } from '@/app/store';
+import { TermInfo } from '@/features/help/TermInfo';
 
 type Phase = 'idle' | 'running' | 'done' | 'failed';
 
@@ -47,7 +48,10 @@ export function CalibrationPanel({ onDone }: { onDone?: (result: CalibrationResu
   return (
     <Card className="stack stack--5">
       <div className="stack stack--2">
-        <span className="ds-label">Calibrazione</span>
+        <span className="info-label">
+          <span className="ds-label">Calibrazione</span>
+          <TermInfo id="calibration" />
+        </span>
         <p>
           Solleva la bici da terra. {hasRear ? 'Le sospensioni devono essere' : 'La forcella deve essere'}{' '}
           completamente {hasRear ? 'estese' : 'estesa'}. Mantieni la bici ferma.

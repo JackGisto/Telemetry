@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, ConfirmModal, Segmented, useToast } from '@/design-system';
 import { ENGINE_VERSION } from '@/analysis';
-import { bleAvailability } from '@/ble';
+import { bleAvailability } from '@/transport';
 import { clearAllData, saveSession } from '@/storage';
 import { newId } from '@/data/defaults';
 import { ScreenHeader } from '@/app/AppShell';

@@ -8,11 +8,12 @@ import {
   StatusIndicator,
   useToast,
 } from '@/design-system';
-import { errorMessage } from '@/ble';
+import { errorMessage } from '@/transport';
 import { ScreenHeader } from '@/app/AppShell';
 import { useBikeStore, useDeviceStore, useHistoryStore } from '@/app/store';
 import { ConnectPanel } from '@/features/device/ConnectPanel';
 import { CalibrationPanel } from '@/features/calibration/CalibrationPanel';
+import { TermInfo } from '@/features/help/TermInfo';
 import { formatDateTime, formatDuration } from '@/features/analysis/presentation';
 
 /**
@@ -170,7 +171,10 @@ export function RunPage() {
                 />
               </div>
               <div className="row row--between text-sm">
-                <span className="muted">Calibrazione</span>
+                <span className="info-label muted">
+                  <span>Calibrazione</span>
+                  <TermInfo id="calibration" />
+                </span>
                 <StatusIndicator
                   tone={calibrated ? 'ok' : 'warn'}
                   label={calibrated ? 'Valida' : 'Da eseguire'}

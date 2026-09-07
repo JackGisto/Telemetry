@@ -11,7 +11,7 @@ connessione e ripresa.
 ```bash
 npm install
 npm run dev            # http://localhost:5173 → landing page; /app → applicazione
-npm test               # 95 test su motore, dati, trasporto, export e flussi UI
+npm test               # 171 test su motore, dati, trasporto, export e flussi UI
 npm run build          # build di produzione
 npm run build:preview  # demo in un unico file HTML, apribile senza server
 ```
@@ -89,6 +89,18 @@ state, skeleton e grafici.
 `StatusIndicator` accosta al colore un glifo (`✓ ! ✕`) e un'etichetta testuale;
 i grafici hanno `aria-label` descrittivi; il focus è sempre visibile.
 
+### Spiegazioni contestuali
+
+Ogni voce che un rider non esperto non riconoscerebbe ha accanto una **"i"**
+che apre una spiegazione in linguaggio semplice: cos'è, come si legge il numero
+e cosa comporta in pratica. Copre metriche, grafici, diagnosi, score e tutti i
+campi della configurazione bici.
+
+Il testo sta tutto in `features/help/glossary.ts`, così può essere riletto e
+corretto come un insieme unico invece che sparso nei componenti. Il pulsante è
+un vero `<button>` con nome accessibile e area di tocco allargata, non un
+glifo decorativo.
+
 ---
 
 ## 3. Landing Page
@@ -116,10 +128,20 @@ che lo verifica.
    bottom-out (con debounce: un colpo = un evento, non un evento per campione),
    tempo a fondo corsa e in alto, top-out, velocità di compressione e ritorno, e
    il **tempo di recupero** dopo un picco, che è l'indicatore su cui lavorano le
-   regole del rebound.
-2. **Diagnosi** (`analysis/diagnostics/`) — dieci regole; ognuna produce
+   regole del rebound. In più due misure che è quello che distingue un'analisi
+   di sospensioni da un grafico di posizioni:
+   - **distribuzione della velocità di stelo**, separata tra basse e alte
+     velocità. La forma di questa distribuzione dice sullo smorzamento molto
+     più di qualunque media: due setup con la stessa velocità media possono
+     comportarsi in modo opposto.
+   - **altezza di marcia dinamica**, presa dai soli campioni in cui lo stelo è
+     fermo. È l'equivalente del sag a bici in movimento, e non viene trascinata
+     in basso da qualche colpo forte come invece succede alla media.
+2. **Diagnosi** (`analysis/diagnostics/`) — tredici regole; ognuna produce
    `id, component, severity, confidence, metric, threshold, description`. La
-   confidenza scende su run corte o con pochi eventi.
+   confidenza scende su run corte o con pochi eventi. Tre regole leggono la
+   distribuzione delle velocità: durezza sui colpi secchi, mancanza di sostegno
+   alle basse velocità e impaccamento tra un colpo e l'altro.
 3. **Scoring** (`analysis/scoring/`) — ogni diagnosi sottrae
    `peso(severità) × confidenza` da 100, per componente e complessivo.
 4. **Raccomandazioni** (`analysis/recommendations/`) — la parte che conta.
@@ -134,8 +156,19 @@ molla senza precarico  → valuta una molla diversa
 nessuna regolazione    → spiega il problema, non inventa una modifica
 ```
 
-Lo stesso vale per il rebound: senza adjuster, l'app spiega e si ferma. È
-verificato da test dedicati.
+La stessa regola vale per i circuiti di smorzamento. Basse e alte velocità sono
+governate da manopole diverse, quindi il motore sceglie quella giusta per il
+comportamento osservato:
+
+```
+durezza sui colpi secchi   → apre la compressione HS, se esiste
+poco sostegno in appoggio  → chiude la compressione LS, se esiste
+una sola manopola          → la usa, e non nomina alcun circuito
+nessuna manopola           → ripiega sulla molla, o spiega
+```
+
+Chi ha una sola vite di compressione non si vede mai suggerire di cercarne una
+seconda. È verificato da test dedicati.
 
 **Normalizzazione** (`data/normalize.ts`): la conversione da conteggi ADC a
 millimetri è isolata qui. Il motore riceve solo millimetri, quindi cambiare
@@ -148,18 +181,36 @@ sensore o encoding non lo tocca.
 
 ## 5. Trasporto e dispositivo simulato
 
-`TelemetryTransport` è l'unico contratto verso il dispositivo. Ne esistono due
+`TelemetryTransport` è l'unico contratto verso il dispositivo. Ne esistono tre
 implementazioni:
 
+- **`WifiTelemetryTransport`** — **il canale primario**. Il dispositivo espone un
+  piccolo server HTTP sulla rete locale (in modalità access point, oppure
+  collegato alla stessa rete del telefono) e l'app parla con lui in JSON.
 - **`MockTelemetryTransport`** — simula connessione, batteria, memoria,
   calibrazione (anche fallita), start/stop, il **pulsante fisico** del
   dispositivo, il trasferimento a chunk, la caduta di connessione e la **ripresa
   dall'offset raggiunto**.
-- **`BleTelemetryTransport`** — Web Bluetooth, strutturalmente completo.
+- **`BleTelemetryTransport`** — Web Bluetooth, canale alternativo.
 
-Web Bluetooth **non** è disponibile ovunque: manca su Safari iOS e Firefox, e
-richiede un contesto sicuro. L'app lo rileva e lo dice esplicitamente, invece di
-offrire un pulsante che fallirà.
+### Perché il Wi-Fi come canale primario
+
+Due ragioni concrete, non di preferenza:
+
+1. **Funziona su tutti i telefoni.** Web Bluetooth non esiste su Safari iOS né su
+   Firefox. Con il Wi-Fi il collegamento funziona ovunque ci sia un browser.
+2. **La ripresa del trasferimento diventa gratuita.** Scaricare una run è una GET
+   HTTP, quindi la ripresa usa l'header `Range`, che browser e server
+   implementano già, invece di un protocollo di chunking scritto a mano.
+
+**Il limite reale, dichiarato apertamente:** una pagina servita in HTTPS non può
+chiamare un indirizzo in HTTP, e il dispositivo sulla rete locale non ha un
+certificato. È il vincolo del contenuto misto. L'app lo rileva prima di provare
+a connettersi e lo spiega, esattamente come fa con il Bluetooth assente: per
+usare il Wi-Fi l'app va servita in locale sulla stessa rete.
+
+HTTP non ha push, quindi lo stato del dispositivo — compreso il suo pulsante
+Start/Stop — viene letto con un polling periodico invece che con le notifiche.
 
 Il trasferimento verifica l'integrità con un CRC32 nell'header del payload.
 Una run scaricata viene rimossa dal dispositivo solo **dopo** essere stata
@@ -172,9 +223,10 @@ isolato e marcato `FIRMWARE TBD`:
 
 | File | Cosa resta da definire |
 | --- | --- |
-| `ble/protocol/gatt.ts` | UUID di servizio e caratteristiche, opcode, MTU, prefisso del nome. Sono **segnaposto**, non derivati da alcuna specifica esistente. |
-| `ble/protocol/codec.ts` | Formato del payload di sessione (oggi JSON + CRC32). |
-| `ble/web/BleTelemetryTransport.ts` | Layout dei pacchetti di stato e di dati; `calibrate()` e `listSessions()` sollevano `not-supported` finché il firmware non li definisce. |
+| `transport/wifi/protocol.ts` | Percorsi HTTP e forme JSON. Sono la **proposta** dell'app, non una specifica congelata. L'indirizzo predefinito `192.168.4.1` è il gateway SoftAP standard dell'SDK ESP32, quindi un valore documentato e non inventato. |
+| `transport/protocol/gatt.ts` | UUID di servizio e caratteristiche, opcode, MTU, prefisso del nome. Sono **segnaposto**, non derivati da alcuna specifica esistente. |
+| `transport/protocol/codec.ts` | Formato del payload di sessione (oggi JSON + CRC32). |
+| `transport/ble/BleTelemetryTransport.ts` | Layout dei pacchetti di stato e di dati; `calibrate()` e `listSessions()` sollevano `not-supported` finché il firmware non li definisce. |
 | `data/normalize.ts` | Risoluzione e fondo scala dell'ADC. |
 
 Quando il protocollo sarà congelato si cambiano queste costanti: nessun altro
@@ -206,7 +258,8 @@ src/
   features/       onboarding, device, bike, calibration, run,
                   analysis, history, comparison, settings, export
   analysis/       metrics, diagnostics, scoring, recommendations, tunables
-  ble/            transport (contratto), protocol, mock, web
+  transport/      core (contratto), wifi, ble, mock, protocol
+  features/help/  glossario e pulsante di spiegazione
   data/           normalizzazione, generatore, dataset
   storage/        IndexedDB
   types/          modelli condivisi
@@ -216,14 +269,18 @@ src/
 
 ## 8. Test
 
-95 test, `npm test`.
+171 test, `npm test`.
 
 | Area | Copertura |
 | --- | --- |
 | Motore | conversione posizione, percentuali, istogramma, bottom-out, rebound, compressione, scoring, diagnosi, determinismo, hardtail, run non analizzabili |
-| Raccomandazioni | aria/molla/precarico/nessuna regolazione, direzione e limiti delle modifiche, deduplica |
+| Velocità e assetto | normalizzazione dell'istogramma, segno di ritorno e compressione, valori fuori scala, split alla soglia, altezza di marcia non falsata dai colpi |
+| Regole di smorzamento | durezza sui colpi, impaccamento, sostegno alle basse velocità, silenzio quando i dati non bastano e quando la diagnosi sarebbe un doppione |
+| Raccomandazioni | aria/molla/precarico/nessuna regolazione, scelta del circuito LS/HS, direzione e limiti delle modifiche, deduplica |
 | Data layer | salvataggio, lettura, aggiornamento note, cancellazione a cascata, impostazioni, wipe |
 | Trasporto | connect, disconnect, calibrazione (ok e fallita), memoria piena, batteria scarica, pulsante fisico, trasferimento a chunk, **ripresa dopo caduta**, CRC |
+| Wi-Fi | comandi HTTP, mappatura dei codici di stato, dispositivo irraggiungibile, download con `Range`, **ripresa che riparte dai byte mancanti**, nessun timer lasciato attivo, blocco del contenuto misto |
+| Spiegazioni | ogni voce del glossario compilata, nome accessibile del pulsante, apertura e chiusura del dialogo |
 | Export | round-trip JSON, CSV campioni, CSV riepilogo, quoting, hardtail |
 | UI | landing, onboarding, connessione, wizard bici, run, download, analisi, consiglio, storico, confronto, percorso hardtail |
 

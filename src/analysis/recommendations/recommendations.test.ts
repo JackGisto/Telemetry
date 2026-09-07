@@ -151,3 +151,98 @@ describe('le raccomandazioni rispettano le regolazioni disponibili', () => {
     }
   });
 });
+
+describe('scelta del circuito di smorzamento', () => {
+  /** A fork with a split compression circuit, as found on higher-end units. */
+  const splitFork: SuspensionConfig = {
+    totalTravelMm: 160,
+    springType: 'air',
+    pressurePsi: 75,
+    rebound: { available: true, clicks: 8 },
+    compression: { available: true, clicks: 10 },
+    highSpeedCompression: { available: true, clicks: 4 },
+    highSpeedRebound: { available: true, clicks: 3 },
+  };
+
+  /** The same fork with a single compression dial. */
+  const singleFork: SuspensionConfig = {
+    totalTravelMm: 160,
+    springType: 'air',
+    pressurePsi: 75,
+    rebound: { available: true, clicks: 8 },
+    compression: { available: true, clicks: 10 },
+  };
+
+  it('punta al circuito alta velocità per la durezza sui colpi secchi', () => {
+    const bike = createDefaultBike({ frontSuspension: splitFork });
+    const recs = buildRecommendations([diagnosis({ id: 'harsh-on-impacts' })], contextFor(bike));
+    expect(recs[0].action.kind).toBe('compression');
+    if (recs[0].action.kind === 'compression') {
+      expect(recs[0].action.circuit).toBe('high-speed');
+      // Harshness means letting the impact through, so the circuit opens.
+      expect(recs[0].action.deltaClicks).toBeLessThan(0);
+    }
+    expect(recs[0].title).toMatch(/alte velocità/i);
+  });
+
+  it('punta al circuito bassa velocità quando manca sostegno', () => {
+    const bike = createDefaultBike({ frontSuspension: splitFork });
+    const recs = buildRecommendations(
+      [diagnosis({ id: 'lacks-low-speed-support' })],
+      contextFor(bike),
+    );
+    expect(recs[0].action.kind).toBe('compression');
+    if (recs[0].action.kind === 'compression') {
+      expect(recs[0].action.circuit).toBe('low-speed');
+      expect(recs[0].action.deltaClicks).toBeGreaterThan(0);
+    }
+    expect(recs[0].title).toMatch(/basse velocità/i);
+  });
+
+  it('non nomina un circuito che la sospensione non ha', () => {
+    const bike = createDefaultBike({ frontSuspension: singleFork });
+    const recs = buildRecommendations(
+      [diagnosis({ id: 'lacks-low-speed-support' })],
+      contextFor(bike),
+    );
+    if (recs[0].action.kind === 'compression') expect(recs[0].action.circuit).toBe('single');
+    // A rider with one dial must not be sent looking for a second one.
+    expect(recs[0].title).not.toMatch(/basse velocità|alte velocità/i);
+  });
+
+  it('ripiega sulla molla quando non esiste alcuna compressione regolabile', () => {
+    const bike = createDefaultBike({
+      frontSuspension: { ...singleFork, compression: { available: false } },
+    });
+    const recs = buildRecommendations(
+      [diagnosis({ id: 'lacks-low-speed-support' })],
+      contextFor(bike),
+    );
+    expect(recs[0].action.kind).toBe('pressure');
+    if (recs[0].action.kind === 'pressure') expect(recs[0].action.deltaPsi).toBeGreaterThan(0);
+  });
+
+  it('corregge l’impaccamento aprendo il ritorno, non toccando la molla', () => {
+    const bike = createDefaultBike({ frontSuspension: splitFork });
+    const recs = buildRecommendations([diagnosis({ id: 'packing-down' })], contextFor(bike));
+    expect(recs[0].action.kind).toBe('rebound');
+    if (recs[0].action.kind === 'rebound') {
+      expect(recs[0].action.deltaClicks).toBeLessThan(0);
+      expect(recs[0].action.circuit).toBe('low-speed');
+    }
+  });
+
+  it('spiega senza inventare nulla se la compressione non è regolabile e la molla è fissa', () => {
+    const bike = createDefaultBike({
+      frontSuspension: {
+        totalTravelMm: 160,
+        springType: 'coil',
+        preload: { available: false },
+        rebound: { available: false },
+        compression: { available: false },
+      },
+    });
+    const recs = buildRecommendations([diagnosis({ id: 'harsh-on-impacts' })], contextFor(bike));
+    expect(recs[0].action.kind).toBe('explain');
+  });
+});

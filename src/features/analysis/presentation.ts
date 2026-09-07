@@ -1,4 +1,10 @@
-import type { BalanceVerdict, Recommendation, Severity, Verdict } from '@/types';
+import type {
+  BalanceVerdict,
+  DiagnosisId,
+  Recommendation,
+  Severity,
+  Verdict,
+} from '@/types';
 import type { Tone } from '@/design-system';
 
 /**
@@ -41,6 +47,28 @@ export const BALANCE_TONE: Record<BalanceVerdict, Tone> = {
   unknown: 'neutral',
 };
 
+/**
+ * Rider-facing name for each diagnosis.
+ *
+ * Expert mode used to print the raw rule id; these read as suspension language
+ * instead, which is what someone comparing two runs actually needs.
+ */
+export const DIAGNOSIS_LABEL: Record<DiagnosisId, string> = {
+  'insufficient-travel-use': 'Corsa poco sfruttata',
+  'excessive-travel-use': 'Corsa sfruttata troppo',
+  'frequent-bottom-out': 'Fondo corsa frequente',
+  'excessive-time-near-bottom': 'Troppo tempo a fondo corsa',
+  'suspension-riding-high': 'Sospensione troppo alta',
+  'suspension-riding-low': 'Sospensione troppo affondata',
+  'rebound-too-fast': 'Ritorno troppo veloce',
+  'rebound-too-slow': 'Ritorno troppo lento',
+  'harsh-on-impacts': 'Dura sui colpi secchi',
+  'lacks-low-speed-support': 'Poco sostegno alle basse velocità',
+  'packing-down': 'Impaccamento tra i colpi',
+  'front-rear-imbalance': 'Squilibrio anteriore / posteriore',
+  'inconsistent-with-style': 'Non coerente con lo stile scelto',
+};
+
 export const SEVERITY_LABEL: Record<Severity, string> = {
   info: 'Nota',
   minor: 'Lieve',
@@ -69,6 +97,13 @@ export function scoreLabel(score: number): string {
   return 'Fuori assetto';
 }
 
+/** Names the circuit only when the suspension actually has a split one. */
+function circuitSuffix(circuit: 'low-speed' | 'high-speed' | 'single'): string {
+  if (circuit === 'low-speed') return ' LS';
+  if (circuit === 'high-speed') return ' HS';
+  return '';
+}
+
 /** Short, imperative summary of a recommendation's mechanical effect. */
 export function actionSummary(rec: Recommendation): string {
   const where = 'component' in rec.action
@@ -80,9 +115,9 @@ export function actionSummary(rec: Recommendation): string {
     case 'pressure':
       return `${where} · ${rec.action.deltaPsi > 0 ? '+' : ''}${rec.action.deltaPsi} PSI`;
     case 'rebound':
-      return `${where} · rebound ${rec.action.deltaClicks > 0 ? '+' : ''}${rec.action.deltaClicks} click`;
+      return `${where} · rebound${circuitSuffix(rec.action.circuit)} ${rec.action.deltaClicks > 0 ? '+' : ''}${rec.action.deltaClicks} click`;
     case 'compression':
-      return `${where} · compressione ${rec.action.deltaClicks > 0 ? '+' : ''}${rec.action.deltaClicks} click`;
+      return `${where} · compressione${circuitSuffix(rec.action.circuit)} ${rec.action.deltaClicks > 0 ? '+' : ''}${rec.action.deltaClicks} click`;
     case 'preload':
       return `${where} · precarico ${rec.action.deltaTurns > 0 ? '+' : ''}${rec.action.deltaTurns} giri`;
     case 'spring-rate':

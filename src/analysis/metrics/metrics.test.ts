@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_TUNABLES } from '../tunables';
 import { percentile, smooth, stdDev } from './signal';
-import { buildHistogram, computeTravel } from './travel';
-import { computeVelocity, findCompressionEvents, recoveryTimeSec } from './velocity';
+import { buildHistogram, computeRideHeight, computeTravel } from './travel';
+import {
+  buildVelocityHistogram,
+  computeVelocity,
+  findCompressionEvents,
+  recoveryTimeSec,
+} from './velocity';
 
 const T = DEFAULT_TUNABLES;
 
@@ -131,5 +136,65 @@ describe('metriche di velocità', () => {
 
   it('restituisce zero su un segnale troppo corto', () => {
     expect(computeVelocity([1, 2], [0, 10], 160, T).velocity.meanCompression).toBe(0);
+  });
+});
+
+describe('distribuzione della velocità di stelo', () => {
+  it('normalizza i bin in modo che sommino a 1', () => {
+    const bins = buildVelocityHistogram([-300, -100, 0, 150, 400], 50, 1000);
+    expect(bins.reduce((sum, b) => sum + b.fraction, 0)).toBeCloseTo(1, 6);
+  });
+
+  it('mette il rebound sotto lo zero e la compressione sopra', () => {
+    const bins = buildVelocityHistogram([-300, 300], 50, 1000);
+    const rebound = bins.filter((b) => b.toMmS <= 0).reduce((s, b) => s + b.fraction, 0);
+    const compression = bins.filter((b) => b.fromMmS >= 0).reduce((s, b) => s + b.fraction, 0);
+    expect(rebound).toBeCloseTo(0.5, 6);
+    expect(compression).toBeCloseTo(0.5, 6);
+  });
+
+  it('raccoglie i valori fuori scala nei bin di bordo invece di perderli', () => {
+    const bins = buildVelocityHistogram([-9999, 9999], 50, 1000);
+    expect(bins[0].fraction).toBeCloseTo(0.5, 6);
+    expect(bins[bins.length - 1].fraction).toBeCloseTo(0.5, 6);
+    expect(bins.reduce((sum, b) => sum + b.fraction, 0)).toBeCloseTo(1, 6);
+  });
+
+  it('separa le bande di velocità alla soglia configurata', () => {
+    // A slow ramp then a sharp one: the split must put them in different bands.
+    const slow = Array.from({ length: 60 }, (_, i) => i * 0.5);
+    const values = [...slow, ...slow.map(() => 30).slice(0, 5), 90, 30];
+    const { velocity } = computeVelocity(values, values.map((_, i) => i * 10), 160, T);
+    const total =
+      velocity.lowSpeedCompression.fraction +
+      velocity.highSpeedCompression.fraction +
+      velocity.lowSpeedRebound.fraction +
+      velocity.highSpeedRebound.fraction;
+    expect(total).toBeCloseTo(1, 6);
+    expect(velocity.highSpeedCompression.mean).toBeGreaterThanOrEqual(T.velocitySplitMmS);
+  });
+});
+
+describe('altezza di marcia dinamica', () => {
+  it('riporta la posizione a cui la sospensione si assesta', () => {
+    // Sits at 32 mm of a 160 mm fork = 20%, with the odd spike on top.
+    const settled = Array.from({ length: 200 }, () => 32);
+    settled[50] = 140;
+    settled[51] = 120;
+    const t = settled.map((_, i) => i * 10);
+    expect(computeRideHeight(settled, t, 160, T)).toBeCloseTo(20, 0);
+  });
+
+  it('non viene trascinata in basso dai colpi come la media', () => {
+    const values = Array.from({ length: 300 }, (_, i) => (i % 30 === 0 ? 150 : 24));
+    const t = values.map((_, i) => i * 10);
+    const rideHeight = computeRideHeight(values, t, 160, T);
+    const meanPct = (values.reduce((a, b) => a + b, 0) / values.length / 160) * 100;
+    expect(rideHeight).toBeLessThan(meanPct);
+    expect(rideHeight).toBeCloseTo(15, 0);
+  });
+
+  it('restituisce zero su un segnale troppo corto', () => {
+    expect(computeRideHeight([10, 10], [0, 10], 160, T)).toBe(0);
   });
 });

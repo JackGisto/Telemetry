@@ -1,5 +1,7 @@
 import type { ClickAdjuster, SuspensionConfig, SuspensionSpringType } from '@/types';
 import { Choice, Field, Segmented } from '@/design-system';
+import { TermInfo } from '@/features/help/TermInfo';
+import type { GlossaryId } from '@/features/help/glossary';
 
 /**
  * Suspension form, shared by fork and shock.
@@ -21,14 +23,16 @@ export function SuspensionForm({
   const patch = (next: Partial<SuspensionConfig>) => onChange({ ...value, ...next });
 
   const adjuster = (
-    key: 'rebound' | 'compression',
+    key: 'rebound' | 'compression' | 'highSpeedRebound' | 'highSpeedCompression',
     label: string,
     current: ClickAdjuster,
+    term: GlossaryId,
   ) => (
     <div className="stack stack--3">
       <div className="switch-row">
-        <span className="field__label" style={{ margin: 0 }}>
-          {label}
+        <span className="field__label info-label" style={{ margin: 0 }}>
+          <span>{label}</span>
+          <TermInfo id={term} />
         </span>
         <Segmented
           ariaLabel={`${label} disponibile`}
@@ -43,7 +47,11 @@ export function SuspensionForm({
       {current.available && (
         <div className="row" style={{ gap: 'var(--s-3)' }}>
           <div className="grow">
-            <Field label="Click attuali" htmlFor={`${idPrefix}-${key}-clicks`}>
+            <Field
+              label="Click attuali"
+              htmlFor={`${idPrefix}-${key}-clicks`}
+              info={<TermInfo id="clicks" />}
+            >
               <input
                 id={`${idPrefix}-${key}-clicks`}
                 className="input"
@@ -89,7 +97,12 @@ export function SuspensionForm({
 
   return (
     <div className="stack stack--5">
-      <Field label={travelLabel} hint="In millimetri." htmlFor={`${idPrefix}-travel`}>
+      <Field
+        label={travelLabel}
+        hint="In millimetri."
+        htmlFor={`${idPrefix}-travel`}
+        info={<TermInfo id={idPrefix === 'rear' ? 'stroke' : 'travel'} />}
+      >
         <input
           id={`${idPrefix}-travel`}
           className="input"
@@ -102,7 +115,10 @@ export function SuspensionForm({
       </Field>
 
       <div className="stack stack--2">
-        <span className="field__label">Tipo di molla</span>
+        <span className="field__label info-label">
+          <span>Tipo di molla</span>
+          <TermInfo id="spring-type" />
+        </span>
         <Segmented<SuspensionSpringType>
           ariaLabel="Tipo di molla"
           value={value.springType}
@@ -127,7 +143,11 @@ export function SuspensionForm({
       </div>
 
       {value.springType === 'air' ? (
-        <Field label="Pressione (PSI)" htmlFor={`${idPrefix}-psi`}>
+        <Field
+          label="Pressione (PSI)"
+          htmlFor={`${idPrefix}-psi`}
+          info={<TermInfo id="pressure" />}
+        >
           <input
             id={`${idPrefix}-psi`}
             className="input"
@@ -142,7 +162,12 @@ export function SuspensionForm({
         </Field>
       ) : (
         <>
-          <Field label="Molla (lb/in)" hint="Opzionale." htmlFor={`${idPrefix}-rate`}>
+          <Field
+            label="Molla (lb/in)"
+            hint="Opzionale."
+            htmlFor={`${idPrefix}-rate`}
+            info={<TermInfo id="spring-rate" />}
+          >
             <input
               id={`${idPrefix}-rate`}
               className="input"
@@ -158,7 +183,10 @@ export function SuspensionForm({
             />
           </Field>
           <div className="stack stack--2">
-            <span className="field__label">Precarico</span>
+            <span className="field__label info-label">
+              <span>Precarico</span>
+              <TermInfo id="preload" />
+            </span>
             <div className="row" style={{ gap: 'var(--s-3)' }}>
               <Choice
                 selected={value.preload?.available === true}
@@ -195,8 +223,33 @@ export function SuspensionForm({
         </>
       )}
 
-      {adjuster('rebound', 'Ritorno (rebound)', value.rebound)}
-      {adjuster('compression', 'Compressione', value.compression)}
+      {adjuster('rebound', 'Ritorno (rebound)', value.rebound, 'rebound')}
+      {adjuster('compression', 'Compressione', value.compression, 'compression')}
+
+      {/*
+        Split circuits change the advice the app can give: with them it can
+        separate support from harshness, without them it says "compressione"
+        and stops. Declaring them is optional and off by default.
+      */}
+      <div className="stack stack--3">
+        <hr className="divider" />
+        <p className="field__hint" style={{ margin: 0 }}>
+          Alcune sospensioni separano la regolazione tra basse e alte velocità. Attivale solo se le
+          hai davvero: l’app non consiglierà mai una manopola che non esiste sulla tua sospensione.
+        </p>
+        {adjuster(
+          'highSpeedCompression',
+          'Compressione alte velocità (HSC)',
+          value.highSpeedCompression ?? { available: false },
+          'high-speed',
+        )}
+        {adjuster(
+          'highSpeedRebound',
+          'Ritorno alte velocità (HSR)',
+          value.highSpeedRebound ?? { available: false },
+          'high-speed',
+        )}
+      </div>
     </div>
   );
 }

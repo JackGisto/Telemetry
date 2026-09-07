@@ -22,6 +22,8 @@ export interface StyleProfile {
   rear: TravelWindow;
   /** Target mean recovery time after a compression peak, in seconds. */
   recoveryTimeSec: [number, number];
+  /** Target dynamic ride height, in % of travel. */
+  rideHeightPct: [number, number];
 }
 
 export interface Tunables {
@@ -49,6 +51,31 @@ export interface Tunables {
   imbalanceReboundSec: number;
   /** Number of histogram bins across the stroke. */
   histogramBins: number;
+
+  /**
+   * Shaft speed, in mm/s, that separates low-speed from high-speed motion.
+   *
+   * Low speed is rider input and terrain undulation, high speed is sharp
+   * impacts; different adjusters control each. The exact split is a convention,
+   * not a physical constant, which is why it lives here and not in a rule.
+   */
+  velocitySplitMmS: number;
+  /** Width of one shaft-velocity histogram bin, in mm/s. */
+  velocityBinWidthMmS: number;
+  /** Velocity range covered by the histogram, in mm/s, either side of zero. */
+  velocityHistogramRangeMmS: number;
+  /** Below this shaft speed, in mm/s, the suspension counts as "settled". */
+  quietVelocityMmS: number;
+  /**
+   * Share of compression motion above the speed split beyond which the unit is
+   * being asked to swallow more sharp impacts than its damping can absorb.
+   */
+  highSpeedCompressionMax: number;
+  /**
+   * Share of rebound motion below the speed split under which the unit is not
+   * recovering between hits: the classic packing-down signature.
+   */
+  lowSpeedReboundMin: number;
   styles: Record<RidingStyle, StyleProfile>;
   /** Contribution of each severity to the deduction from a 100-point score. */
   severityWeight: Record<Severity, number>;
@@ -60,6 +87,11 @@ export interface Tunables {
   maxPsiStep: { front: number; rear: number };
   /** Recovery-time error, in seconds, that maps to one rebound click. */
   secPerReboundClick: number;
+  /**
+   * Error, as a fraction of motion in a speed band, that maps to one click of
+   * the corresponding compression or rebound adjuster.
+   */
+  bandFractionPerClick: number;
   /** Max recommendations surfaced in Standard mode. */
   maxStandardRecommendations: number;
 }
@@ -72,11 +104,13 @@ const style = (
   rearMean: [number, number],
   bottomOut: [number, number],
   recovery: [number, number],
+  rideHeight: [number, number],
 ): StyleProfile => ({
   label,
   front: { maxTravelPct: frontMax, meanTravelPct: frontMean, bottomOutPerMin: bottomOut },
   rear: { maxTravelPct: rearMax, meanTravelPct: rearMean, bottomOutPerMin: bottomOut },
   recoveryTimeSec: recovery,
+  rideHeightPct: rideHeight,
 });
 
 export const DEFAULT_TUNABLES: Tunables = {
@@ -93,12 +127,19 @@ export const DEFAULT_TUNABLES: Tunables = {
   imbalanceReboundSec: 0.12,
   histogramBins: 10,
 
+  velocitySplitMmS: 200,
+  velocityBinWidthMmS: 50,
+  velocityHistogramRangeMmS: 1000,
+  quietVelocityMmS: 25,
+  highSpeedCompressionMax: 0.34,
+  lowSpeedReboundMin: 0.55,
+
   styles: {
     // Comfort riders should use the stroke fully but rarely reach the end.
-    comfort: style('Comfort', [82, 93], [22, 34], [80, 92], [24, 36], [0, 0.4], [0.28, 0.48]),
-    balanced: style('Bilanciato', [88, 97], [20, 32], [86, 96], [22, 34], [0, 0.8], [0.22, 0.4]),
+    comfort: style('Comfort', [82, 93], [22, 34], [80, 92], [24, 36], [0, 0.4], [0.28, 0.48], [20, 34]),
+    balanced: style('Bilanciato', [88, 97], [20, 32], [86, 96], [22, 34], [0, 0.8], [0.22, 0.4], [17, 30]),
     // Aggressive riders expect to touch the end of the stroke on big hits.
-    aggressive: style('Aggressivo', [92, 100], [18, 30], [90, 100], [20, 32], [0.2, 1.6], [0.16, 0.32]),
+    aggressive: style('Aggressivo', [92, 100], [18, 30], [90, 100], [20, 32], [0.2, 1.6], [0.16, 0.32], [14, 26]),
   },
 
   severityWeight: { info: 0, minor: 6, moderate: 14, major: 26 },
@@ -106,6 +147,7 @@ export const DEFAULT_TUNABLES: Tunables = {
   psiPerTravelPoint: { front: 0.7, rear: 1.1 },
   maxPsiStep: { front: 12, rear: 20 },
   secPerReboundClick: 0.06,
+  bandFractionPerClick: 0.07,
   maxStandardRecommendations: 3,
 };
 

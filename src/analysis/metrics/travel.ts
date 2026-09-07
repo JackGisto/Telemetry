@@ -1,12 +1,13 @@
 import type { TravelHistogramBin } from '@/types';
 import type { Tunables } from '../tunables';
-import { clamp, mean, percentile } from './signal';
+import { clamp, mean, percentile, smooth } from './signal';
 
 export interface TravelSummary {
   maxTravelMm: number;
   maxTravelPct: number;
   meanTravelMm: number;
   meanTravelPct: number;
+  rideHeightPct: number;
   p95TravelPct: number;
   histogram: TravelHistogramBin[];
   bottomOutCount: number;
@@ -34,6 +35,7 @@ export function computeTravel(
       maxTravelPct: 0,
       meanTravelMm: 0,
       meanTravelPct: 0,
+      rideHeightPct: 0,
       p95TravelPct: 0,
       histogram: emptyHistogram(tunables.histogramBins),
       bottomOutCount: 0,
@@ -52,6 +54,7 @@ export function computeTravel(
     maxTravelPct: clamp((maxTravelMm / totalTravelMm) * 100, 0, 100),
     meanTravelMm,
     meanTravelPct: clamp((meanTravelMm / totalTravelMm) * 100, 0, 100),
+    rideHeightPct: computeRideHeight(positionsMm, timestampsMs, totalTravelMm, tunables),
     p95TravelPct: percentile(pct, 0.95),
     histogram: buildHistogram(pct, tunables.histogramBins),
     bottomOutCount: countBottomOuts(pct, timestampsMs, tunables),
@@ -59,6 +62,41 @@ export function computeTravel(
     timeNearTop: fractionBelow(pct, tunables.nearTopPct),
     topOutCount: countTopOuts(positionsMm, timestampsMs, tunables),
   };
+}
+
+/**
+ * Dynamic ride height: where the suspension settles while the bike is moving.
+ *
+ * Only the samples where the shaft is barely moving are counted, so the figure
+ * reflects the position the bike rides at rather than being pulled down by a
+ * handful of big hits the way a plain average is. This is the running
+ * equivalent of static sag, and it is what "riding high" or "riding low"
+ * actually means.
+ *
+ * Falls back to the median of every sample when the run has no quiet stretch,
+ * which is the honest answer for a continuously rough descent.
+ */
+export function computeRideHeight(
+  positionsMm: number[],
+  timestampsMs: number[],
+  totalTravelMm: number,
+  tunables: Tunables,
+): number {
+  if (positionsMm.length < 3 || totalTravelMm <= 0) return 0;
+
+  const smoothed = smooth(positionsMm, 5);
+  const quiet: number[] = [];
+
+  for (let i = 1; i < smoothed.length; i++) {
+    const dtSec = ((timestampsMs[i] ?? 0) - (timestampsMs[i - 1] ?? 0)) / 1000;
+    if (dtSec <= 0) continue;
+    const velocity = Math.abs((smoothed[i] - smoothed[i - 1]) / dtSec);
+    if (velocity <= tunables.quietVelocityMmS) quiet.push(smoothed[i]);
+  }
+
+  // Median, not mean: a settled position should not be moved by outliers.
+  const source = quiet.length >= 10 ? quiet : smoothed;
+  return clamp((percentile(source, 0.5) / totalTravelMm) * 100, 0, 100);
 }
 
 function emptyHistogram(bins: number): TravelHistogramBin[] {

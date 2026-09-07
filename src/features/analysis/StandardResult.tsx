@@ -1,5 +1,6 @@
 import type { AnalysisReport, Recommendation } from '@/types';
 import { Badge, Card } from '@/design-system';
+import { TermInfo } from '@/features/help/TermInfo';
 import {
   BALANCE_LABEL,
   BALANCE_TONE,
@@ -41,7 +42,10 @@ export function StandardResult({
           </div>
         </div>
         <div className="stack stack--2 grow">
-          <span className="ds-label">Valutazione complessiva</span>
+          <span className="info-label">
+            <span className="ds-label">Valutazione complessiva</span>
+            <TermInfo id="score" />
+          </span>
           <strong style={{ fontSize: 'var(--fs-h3)' }}>{scoreLabel(report.scores.overall)}</strong>
           <span className="text-sm muted">
             {recommendations.length === 0
@@ -53,7 +57,10 @@ export function StandardResult({
 
       <Card>
         <div className="verdict-row">
-          <span className="verdict-row__label">Forcella</span>
+          <span className="info-label">
+            <span className="verdict-row__label">Forcella</span>
+            <TermInfo id="travel-max" />
+          </span>
           <div className="row" style={{ gap: 'var(--s-2)' }}>
             <span className="verdict-row__value">{VERDICT_LABEL[report.verdicts.front]}</span>
             <Badge tone={VERDICT_TONE[report.verdicts.front]}>
@@ -64,7 +71,10 @@ export function StandardResult({
 
         {report.verdicts.rear && (
           <div className="verdict-row">
-            <span className="verdict-row__label">Posteriore</span>
+            <span className="info-label">
+              <span className="verdict-row__label">Posteriore</span>
+              <TermInfo id="travel-max" />
+            </span>
             <div className="row" style={{ gap: 'var(--s-2)' }}>
               <span className="verdict-row__value">{VERDICT_LABEL[report.verdicts.rear]}</span>
               <Badge tone={VERDICT_TONE[report.verdicts.rear]}>{report.scores.rear}</Badge>
@@ -74,7 +84,10 @@ export function StandardResult({
 
         {report.verdicts.balance && (
           <div className="verdict-row">
-            <span className="verdict-row__label">Bilanciamento</span>
+            <span className="info-label">
+              <span className="verdict-row__label">Bilanciamento</span>
+              <TermInfo id="balance" />
+            </span>
             <div className="row" style={{ gap: 'var(--s-2)' }}>
               <span className="verdict-row__value">{BALANCE_LABEL[report.verdicts.balance]}</span>
               <Badge tone={BALANCE_TONE[report.verdicts.balance]}>{report.scores.balance}</Badge>

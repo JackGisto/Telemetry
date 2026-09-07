@@ -1,10 +1,48 @@
-import type { VelocityStats } from '@/types';
+import type { SpeedBandStats, VelocityHistogramBin, VelocityStats } from '@/types';
 import type { Tunables } from '../tunables';
 import { mean, percentile, smooth } from './signal';
 
 export interface VelocitySummary {
   velocity: VelocityStats;
   compressionEvents: number;
+}
+
+const EMPTY_BAND: SpeedBandStats = { mean: 0, fraction: 0 };
+
+/**
+ * Distribution of shaft velocity, rebound (negative) through compression.
+ *
+ * Reading damping from the shape of this distribution, rather than from a
+ * single average, is standard practice in suspension work: two setups with the
+ * same mean velocity can behave completely differently.
+ */
+export function buildVelocityHistogram(
+  velocities: number[],
+  binWidth: number,
+  range: number,
+): VelocityHistogramBin[] {
+  const binCount = Math.max(2, Math.ceil((range * 2) / binWidth));
+  const bins: VelocityHistogramBin[] = Array.from({ length: binCount }, (_, i) => ({
+    fromMmS: -range + i * binWidth,
+    toMmS: -range + (i + 1) * binWidth,
+    fraction: 0,
+  }));
+  if (velocities.length === 0) return bins;
+
+  for (const v of velocities) {
+    // Values past either end are clamped into the edge bins rather than dropped,
+    // so the fractions still sum to 1 and nothing is silently lost.
+    const index = Math.min(binCount - 1, Math.max(0, Math.floor((v + range) / binWidth)));
+    bins[index].fraction += 1;
+  }
+  for (const bin of bins) bin.fraction /= velocities.length;
+  return bins;
+}
+
+/** Mean magnitude and share of motion within one speed band. */
+function band(magnitudes: number[], totalMoving: number): SpeedBandStats {
+  if (magnitudes.length === 0 || totalMoving === 0) return EMPTY_BAND;
+  return { mean: mean(magnitudes), fraction: magnitudes.length / totalMoving };
 }
 
 /**
@@ -29,6 +67,15 @@ export function computeVelocity(
       maxCompression: 0,
       maxRebound: 0,
       meanRecoveryTimeSec: 0,
+      histogram: buildVelocityHistogram(
+        [],
+        tunables.velocityBinWidthMmS,
+        tunables.velocityHistogramRangeMmS,
+      ),
+      lowSpeedCompression: EMPTY_BAND,
+      highSpeedCompression: EMPTY_BAND,
+      lowSpeedRebound: EMPTY_BAND,
+      highSpeedRebound: EMPTY_BAND,
     },
     compressionEvents: 0,
   };
@@ -37,15 +84,23 @@ export function computeVelocity(
   const smoothed = smooth(positionsMm, 5);
   const compression: number[] = [];
   const rebound: number[] = [];
+  /** Signed velocities of every moving sample, for the distribution. */
+  const signed: number[] = [];
 
   for (let i = 1; i < smoothed.length; i++) {
     const dtSec = ((timestampsMs[i] ?? 0) - (timestampsMs[i - 1] ?? 0)) / 1000;
     if (dtSec <= 0) continue;
     const dv = (smoothed[i] - smoothed[i - 1]) / dtSec;
     if (Math.abs(dv * dtSec) < tunables.noiseFloorMm) continue;
+    signed.push(dv);
     if (dv > 0) compression.push(dv);
     else rebound.push(-dv);
   }
+
+  // Split each direction at the configured speed threshold. The two halves are
+  // controlled by different adjusters, so they are judged separately.
+  const split = tunables.velocitySplitMmS;
+  const moving = compression.length + rebound.length;
 
   const events = findCompressionEvents(smoothed, totalTravelMm, tunables);
   const recoveries = events
@@ -61,6 +116,15 @@ export function computeVelocity(
       maxCompression: compression.length ? Math.max(...compression) : 0,
       maxRebound: rebound.length ? Math.max(...rebound) : 0,
       meanRecoveryTimeSec: mean(recoveries),
+      histogram: buildVelocityHistogram(
+        signed,
+        tunables.velocityBinWidthMmS,
+        tunables.velocityHistogramRangeMmS,
+      ),
+      lowSpeedCompression: band(compression.filter((v) => v < split), moving),
+      highSpeedCompression: band(compression.filter((v) => v >= split), moving),
+      lowSpeedRebound: band(rebound.filter((v) => v < split), moving),
+      highSpeedRebound: band(rebound.filter((v) => v >= split), moving),
     },
     compressionEvents: events.length,
   };

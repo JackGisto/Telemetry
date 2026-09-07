@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  availableTransports,
   MockTelemetryDevice,
   MockTelemetryTransport,
   TransportError,
@@ -201,8 +202,18 @@ describe('selezione del trasporto', () => {
     expect(createTransport('mock').kind).toBe('mock');
   });
 
+  it('crea il trasporto Wi-Fi, che è il canale primario', () => {
+    expect(createTransport('wifi').kind).toBe('wifi');
+  });
+
+  it('propone il Wi-Fi come opzione consigliata', () => {
+    const options = availableTransports('http://192.168.4.1');
+    expect(options[0].kind).toBe('wifi');
+    expect(options[0].primary).toBe(true);
+  });
+
   it('rifiuta esplicitamente i canali non ancora implementati', () => {
-    expect(() => createTransport('wifi')).toThrow(TransportError);
+    expect(() => createTransport('usb')).toThrow(TransportError);
     expect(() => createTransport('usb')).toThrow(/non ancora implementato/);
   });
 

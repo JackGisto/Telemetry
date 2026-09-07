@@ -3,6 +3,7 @@ import type { BikeConfig, RiderLevel, RidingStyle, SuspensionConfig } from '@/ty
 import { Button, Card, Choice, Field, useToast } from '@/design-system';
 import { createDefaultBike } from '@/data/defaults';
 import { useBikeStore } from '@/app/store';
+import { TermInfo } from '@/features/help/TermInfo';
 import { SuspensionForm } from './SuspensionForm';
 
 const STYLES: Array<{ value: RidingStyle; title: string; description: string }> = [
@@ -156,6 +157,7 @@ export function BikeWizard({
               label="Rapporto di leva (opzionale)"
               hint="Corsa ruota divisa per corsa ammortizzatore. Se non lo conosci, lascialo vuoto."
               htmlFor="rear-leverage"
+              info={<TermInfo id="leverage-ratio" />}
             >
               <input
                 id="rear-leverage"
@@ -183,7 +185,10 @@ export function BikeWizard({
       {step === 3 && (
         <Card className="stack stack--5">
           <div className="stack stack--3">
-            <span className="field__label">Stile di guida</span>
+            <span className="field__label info-label">
+              <span>Stile di guida</span>
+              <TermInfo id="riding-style" />
+            </span>
             {STYLES.map((style) => (
               <Choice
                 key={style.value}

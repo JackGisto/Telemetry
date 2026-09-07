@@ -1,25 +1,37 @@
 import { useState } from 'react';
 import type { TransportKind } from '@/types';
-import { availableTransports, errorMessage } from '@/ble';
-import { Button, Card, ErrorState, StatusIndicator, useToast } from '@/design-system';
-import { useDeviceStore } from '@/app/store';
+import { availableTransports, errorMessage } from '@/transport';
+import {
+  Button,
+  Card,
+  ErrorState,
+  Field,
+  StatusIndicator,
+  useToast,
+} from '@/design-system';
+import { useDeviceStore, useSettingsStore } from '@/app/store';
 
 /**
- * Device connection, reused by onboarding and by the Run screen.
+ * Device connection, reused by onboarding, the Run screen and Settings.
  *
- * It states plainly what this browser can do rather than offering a Bluetooth
- * button that will fail: Web Bluetooth is missing on iOS Safari and Firefox.
+ * Wi-Fi leads because it is the channel that works on every phone. Each option
+ * states plainly whether this browser can actually use it, rather than offering
+ * a button that will fail on click.
  */
 export function ConnectPanel({ onConnected }: { onConnected?: () => void }) {
   const { connection, info, status, connect, disconnect, lastError } = useDeviceStore();
+  const { deviceOrigin, update } = useSettingsStore();
+  const [origin, setOrigin] = useState(deviceOrigin);
   const [busy, setBusy] = useState<TransportKind | null>(null);
   const toast = useToast();
-  const options = availableTransports();
+  const options = availableTransports(origin);
 
   const handleConnect = async (kind: TransportKind) => {
     setBusy(kind);
     try {
-      await connect(kind);
+      await connect(kind, kind === 'wifi' ? origin : undefined);
+      if (kind === 'wifi' && origin !== deviceOrigin) await update({ deviceOrigin: origin });
+      await update({ preferredTransport: kind === 'usb' ? 'wifi' : kind });
       toast.push({ tone: 'ok', title: 'Dispositivo collegato' });
       onConnected?.();
     } catch {
@@ -78,7 +90,7 @@ export function ConnectPanel({ onConnected }: { onConnected?: () => void }) {
           title={message.title}
           body={message.body}
           action={
-            <Button variant="primary" onClick={() => void handleConnect('mock')}>
+            <Button variant="primary" onClick={() => void handleConnect('wifi')}>
               Riprova
             </Button>
           }
@@ -92,19 +104,55 @@ export function ConnectPanel({ onConnected }: { onConnected?: () => void }) {
       {options.map((option) => (
         <Card key={option.kind} className="stack stack--3">
           <div className="row row--between">
-            <strong>{option.label}</strong>
+            <span className="info-label">
+              <strong>{option.label}</strong>
+              {option.primary && <span className="badge badge--info">Consigliato</span>}
+            </span>
             {!option.available && <StatusIndicator tone="warn" label="Non disponibile" />}
           </div>
-          {option.note && <p className="text-sm muted">{option.note}</p>}
+
+          <p className="text-sm muted">{option.description}</p>
+
+          {option.kind === 'wifi' && (
+            <>
+              <ol className="stack stack--1 text-sm muted" style={{ margin: 0, paddingLeft: '1.2rem' }}>
+                <li>Accendi il dispositivo sulla bici.</li>
+                <li>Collega il telefono alla rete Wi-Fi del dispositivo.</li>
+                <li>Torna qui e premi Collega.</li>
+              </ol>
+              <Field
+                label="Indirizzo del dispositivo"
+                hint="Cambialo solo se il dispositivo è collegato alla tua rete di casa."
+                htmlFor="device-origin"
+              >
+                <input
+                  id="device-origin"
+                  className="input ds-mono"
+                  inputMode="url"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={origin}
+                  onChange={(event) => setOrigin(event.target.value.trim())}
+                />
+              </Field>
+            </>
+          )}
+
+          {option.note && (
+            <p className="text-sm" style={{ color: 'var(--c-warn)' }}>
+              {option.note}
+            </p>
+          )}
+
           <Button
-            variant={option.kind === 'ble' ? 'primary' : 'secondary'}
+            variant={option.primary ? 'primary' : 'secondary'}
             block
             disabled={!option.available}
             loading={busy === option.kind}
             onClick={() => void handleConnect(option.kind)}
           >
             {busy === option.kind
-              ? connection === 'scanning'
+              ? busy === 'ble'
                 ? 'Ricerca dispositivo…'
                 : 'Connessione…'
               : 'Collega'}

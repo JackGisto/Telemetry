@@ -1,5 +1,5 @@
 import type { RawSample } from '@/types';
-import { TransportError } from '../transport/types';
+import { TransportError } from '../core/types';
 
 /**
  * Session payload codec.

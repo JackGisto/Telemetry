@@ -113,19 +113,25 @@ export function Field({
   hint,
   error,
   htmlFor,
+  info,
   children,
 }: {
   label: string;
   hint?: string;
   error?: string;
   htmlFor?: string;
+  /** Optional explanation control rendered next to the label. */
+  info?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="field">
-      <label className="field__label" htmlFor={htmlFor}>
-        {label}
-      </label>
+      <span className="info-label">
+        <label className="field__label" htmlFor={htmlFor}>
+          {label}
+        </label>
+        {info}
+      </span>
       {children}
       {error ? (
         <span className="field__error" role="alert">

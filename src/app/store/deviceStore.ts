@@ -14,7 +14,7 @@ import {
   decodeSessionPayload,
   type TelemetryTransport,
   type TransportErrorCode,
-} from '@/ble';
+} from '@/transport';
 import { getCalibration, saveCalibration, saveSession } from '@/storage';
 import { newId } from '@/data/defaults';
 import { useBikeStore } from './bikeStore';
@@ -34,7 +34,7 @@ interface DeviceState {
   resumable: string | null;
   lastError: TransportErrorCode | null;
 
-  connect: (kind: TransportKind) => Promise<void>;
+  connect: (kind: TransportKind, origin?: string) => Promise<void>;
   disconnect: () => Promise<void>;
   refreshStatus: () => Promise<void>;
   refreshSessions: () => Promise<void>;
@@ -64,9 +64,12 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
   resumable: null,
   lastError: null,
 
-  connect: async (kind) => {
+  connect: async (kind, origin) => {
     set({ connection: kind === 'ble' ? 'scanning' : 'connecting', lastError: null });
-    const transport = get().transport?.kind === kind ? get().transport! : createTransport(kind);
+    // A Wi-Fi transport is rebuilt whenever the address changes, so editing it
+    // in the UI actually takes effect on the next attempt.
+    const reusable = get().transport?.kind === kind && !(kind === 'wifi' && origin);
+    const transport = reusable ? get().transport! : createTransport(kind, { origin });
     try {
       await transport.connect();
       const [info, status] = await Promise.all([

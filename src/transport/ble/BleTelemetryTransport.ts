@@ -6,7 +6,7 @@ import type {
   TransferProgress,
   TransportKind,
 } from '@/types';
-import { TransportError, type TelemetryTransport } from '../transport/types';
+import { TransportError, type TelemetryTransport } from '../core/types';
 import { DEVICE_NAME_PREFIX, GATT, OPCODE } from '../protocol/gatt';
 import { crc32 } from '../protocol/codec';
 

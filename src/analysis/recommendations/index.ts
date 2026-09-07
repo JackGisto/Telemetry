@@ -1,5 +1,7 @@
 import type {
   BikeConfig,
+  ClickAdjuster,
+  DampingCircuit,
   Diagnosis,
   Recommendation,
   RecommendationAction,
@@ -79,35 +81,102 @@ function springAction(
   };
 }
 
-/** Rebound fix: only when the unit exposes a rebound adjuster. */
+const OF: Record<SuspensionComponent, string> = {
+  front: 'della forcella',
+  rear: 'del posteriore',
+};
+
+/** How a circuit is named to the rider, once we know which one we picked. */
+const CIRCUIT_LABEL: Record<DampingCircuit, string> = {
+  'low-speed': 'alle basse velocità',
+  'high-speed': 'alle alte velocità',
+  single: '',
+};
+
+/**
+ * Pick the adjuster that actually controls the behaviour we want to change.
+ *
+ * A unit with a split circuit gets the specific knob; a unit with a single
+ * adjuster gets that one, described without a circuit name so the rider is not
+ * sent looking for a dial that is not on their fork. A unit with neither gets
+ * nothing, and the caller falls back to explaining.
+ */
+function pickAdjuster(
+  unit: SuspensionConfig,
+  kind: 'rebound' | 'compression',
+  preferred: DampingCircuit,
+): { adjuster: ClickAdjuster; circuit: DampingCircuit } | null {
+  const single = kind === 'rebound' ? unit.rebound : unit.compression;
+  const high = kind === 'rebound' ? unit.highSpeedRebound : unit.highSpeedCompression;
+
+  if (preferred === 'high-speed' && high?.available) {
+    return { adjuster: high, circuit: 'high-speed' };
+  }
+  if (!single.available) {
+    // No base adjuster: the split one is the only option left, whatever we wanted.
+    return high?.available ? { adjuster: high, circuit: 'high-speed' } : null;
+  }
+  // With a split circuit present, the base adjuster is the low-speed one.
+  return { adjuster: single, circuit: high?.available ? 'low-speed' : 'single' };
+}
+
+function clickTitle(
+  verb: string,
+  what: string,
+  component: SuspensionComponent,
+  circuit: DampingCircuit,
+  clicks: number,
+): string {
+  const where = CIRCUIT_LABEL[circuit];
+  return `${verb} ${what} ${OF[component]}${where ? ` ${where}` : ''} di ${clicks} click`;
+}
+
+/** Rebound fix: only when the unit exposes a matching rebound adjuster. */
 function reboundAction(
   unit: SuspensionConfig,
   component: SuspensionComponent,
   direction: 'slower' | 'faster',
   errorSec: number,
   tunables: Tunables,
+  preferred: DampingCircuit = 'single',
 ): { action: RecommendationAction; title: string } | null {
-  if (!unit.rebound.available) return null;
+  const picked = pickAdjuster(unit, 'rebound', preferred);
+  if (!picked) return null;
   const clicks = clamp(Math.round(Math.abs(errorSec) / tunables.secPerReboundClick), 1, 4);
   // Closing clicks slows the rebound down; opening speeds it up.
   const delta = direction === 'slower' ? clicks : -clicks;
   return {
-    action: { kind: 'rebound', component, deltaClicks: delta },
-    title:
-      direction === 'slower'
-        ? `Chiudi il rebound ${component === 'front' ? 'della forcella' : 'del posteriore'} di ${clicks} click`
-        : `Apri il rebound ${component === 'front' ? 'della forcella' : 'del posteriore'} di ${clicks} click`,
+    action: { kind: 'rebound', component, deltaClicks: delta, circuit: picked.circuit },
+    title: clickTitle(
+      direction === 'slower' ? 'Chiudi' : 'Apri',
+      'il rebound',
+      component,
+      picked.circuit,
+      clicks,
+    ),
   };
 }
 
+/** Compression fix, aimed at the circuit that governs the observed behaviour. */
 function compressionAction(
   unit: SuspensionConfig,
   component: SuspensionComponent,
+  direction: 'firmer' | 'softer' = 'firmer',
+  clicks = 1,
+  preferred: DampingCircuit = 'single',
 ): { action: RecommendationAction; title: string } | null {
-  if (!unit.compression.available) return null;
+  const picked = pickAdjuster(unit, 'compression', preferred);
+  if (!picked) return null;
+  const delta = direction === 'firmer' ? clicks : -clicks;
   return {
-    action: { kind: 'compression', component, deltaClicks: 1 },
-    title: `Chiudi la compressione ${component === 'front' ? 'della forcella' : 'del posteriore'} di 1 click`,
+    action: { kind: 'compression', component, deltaClicks: delta, circuit: picked.circuit },
+    title: clickTitle(
+      direction === 'firmer' ? 'Chiudi' : 'Apri',
+      'la compressione',
+      component,
+      picked.circuit,
+      clicks,
+    ),
   };
 }
 
@@ -203,6 +272,74 @@ export function buildRecommendations(
               causes: [d.id],
             });
           }
+        }
+        break;
+      }
+
+      case 'harsh-on-impacts': {
+        // Sharp impacts are the high-speed compression circuit's job.
+        const rec = compressionAction(unit, component, 'softer', 2, 'high-speed');
+        if (rec) {
+          push({
+            id: '',
+            priority,
+            action: rec.action,
+            title: rec.title,
+            rationale: `${d.description} Aprire la compressione alle alte velocità lascia passare i colpi secchi senza toccare il sostegno in curva.`,
+            causes: [d.id],
+          });
+        } else {
+          push({
+            id: '',
+            priority: priority - 0.5,
+            action: { kind: 'explain', component },
+            title: `Il ${NAME[component]} risulta duro sui colpi secchi`,
+            rationale: `${d.description} Questa sospensione non ha una regolazione della compressione, quindi la strada resta ammorbidire la molla.`,
+            causes: [d.id],
+          });
+        }
+        break;
+      }
+
+      case 'packing-down': {
+        // Not recovering between hits is a rebound problem, not a spring one.
+        const rec = reboundAction(unit, component, 'faster', 0.12, ctx.tunables, 'low-speed');
+        if (rec) {
+          push({
+            id: '',
+            priority,
+            action: rec.action,
+            title: rec.title,
+            rationale: `${d.description} Un ritorno più rapido le permette di riestendersi tra un colpo e l'altro.`,
+            causes: [d.id],
+          });
+        }
+        break;
+      }
+
+      case 'lacks-low-speed-support': {
+        // Sitting too deep: firm up the low-speed circuit before touching the
+        // spring, which would also change how the unit uses the whole stroke.
+        const rec = compressionAction(unit, component, 'firmer', 2, 'low-speed');
+        if (rec) {
+          push({
+            id: '',
+            priority,
+            action: rec.action,
+            title: rec.title,
+            rationale: `${d.description} Chiudere la compressione alle basse velocità alza la bici senza irrigidirla sui colpi forti.`,
+            causes: [d.id],
+          });
+        } else {
+          const spring = springAction(unit, component, 'stiffer', 5, ctx.tunables);
+          push({
+            id: '',
+            priority: priority - 0.1,
+            action: spring.action,
+            title: spring.title,
+            rationale: `${d.description} Senza regolazione di compressione, l'unica leva è irrigidire la molla.`,
+            causes: [d.id],
+          });
         }
         break;
       }
