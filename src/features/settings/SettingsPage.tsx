@@ -12,6 +12,8 @@ import { parseJson } from '@/features/export/exporters';
 import { readTextFile } from '@/features/export/download';
 import { CalibrationPanel } from '@/features/calibration/CalibrationPanel';
 import { ConnectPanel } from '@/features/device/ConnectPanel';
+import { AccountPanel } from '@/features/profile/AccountPanel';
+import { ProfilePanel } from '@/features/profile/ProfilePanel';
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -55,6 +57,13 @@ export function SettingsPage() {
       <ScreenHeader title="Impostazioni" />
 
       <div className="stack stack--4">
+        <Card className="stack stack--3">
+          <span className="ds-label">Account</span>
+          <AccountPanel />
+        </Card>
+
+        <ProfilePanel />
+
         <Card className="stack stack--3">
           <span className="ds-label">Modalità</span>
           <Segmented

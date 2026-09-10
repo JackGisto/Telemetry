@@ -11,7 +11,7 @@ connessione e ripresa.
 ```bash
 npm install
 npm run dev            # http://localhost:5173 → landing page; /app → applicazione
-npm test               # 194 test su motore, dati, trasporto, export e flussi UI
+npm test               # 220 test su motore, dati, trasporto, export e flussi UI
 npm run build          # build di produzione
 npm run build:preview  # demo in un unico file HTML, apribile senza server
 npm run build:pages    # build per GitHub Pages (usa BASE_PATH)
@@ -292,7 +292,51 @@ livello va toccato.
 
 ---
 
-## 6. Dataset di test
+## 6. Profilo rider e account
+
+### Dati sanitari
+
+Il profilo raccoglie sesso, altezza, peso e anno di nascita. Sono dati sanitari,
+quindi l'app **chiede il consenso prima di scrivere qualunque cosa**: il livello
+di persistenza rifiuta il salvataggio se il consenso manca, cosi' la regola non
+dipende dal fatto che una schermata si ricordi di controllarla. Revocare il
+consenso **elimina** i valori, non li nasconde.
+
+Il peso vive nel profilo e non nella configurazione della bici: la stessa
+persona su due bici pesa lo stesso, e due copie modificabili divergerebbero. La
+bici conserva il peso solo nello snapshot della run, cosi' una run esportata
+ricorda la massa con cui e' stata registrata: servira' per ritarare il motore.
+
+### Import dalle app di salute
+
+**Non e' possibile da un browser, ed e' un limite di piattaforma, non qualcosa
+lasciato a meta'.** Apple Health e' raggiungibile solo tramite HealthKit, un
+framework iOS senza API web; Health Connect e' analogamente un'API Android
+on-device, e la vecchia API REST di Google Fit, che era raggiungibile dal web, e'
+stata dismessa.
+
+L'app espone quindi `HealthProvider`, con la stessa forma di
+`TelemetryTransport`: l'inserimento manuale funziona oggi, e i provider nativi
+sono implementati contro un ponte (`window.mtbHealthBridge`) che la shell
+nativa dovra' esporre. Finche' non c'e', si dichiarano non disponibili e
+spiegano perche', invece di offrire un pulsante che non fa nulla.
+
+### Account
+
+L'app **funziona interamente senza account**, e questa resta la via consigliata
+in onboarding: nessuna registrazione, tutto sul dispositivo, offline.
+
+L'accesso con Google usa Google Identity Services e si attiva solo se al momento
+della build e' presente `VITE_GOOGLE_CLIENT_ID`; senza, l'opzione si dichiara
+non configurata.
+
+Una distinzione che il codice documenta e che conviene tenere presente:
+l'accesso stabilisce **chi e' il rider**, non protegge e non sincronizza nulla.
+Verificare il token richiede un server, e non c'e': le run restano
+nell'IndexedDB del browser. Le informazioni del token sono lette senza
+verificarne la firma proprio per questo, e servono solo a mostrare un nome.
+
+## 7. Dataset di test
 
 `src/data/fixtures/` contiene sei run di riferimento: `normal_run`,
 `stiff_fork`, `soft_shock`, `fast_rebound`, `slow_rebound`,
@@ -306,7 +350,7 @@ array `samples` a un dataset.
 
 ---
 
-## 7. Struttura
+## 8. Struttura
 
 ```
 src/
@@ -317,6 +361,8 @@ src/
                   analysis, history, comparison, settings, export
   analysis/       metrics, diagnostics, scoring, recommendations, tunables
   transport/      core (contratto), wifi, ble, mock, protocol
+  health/         provider dati sanitari: manuale e ponte nativo
+  auth/           account locale e accesso Google
   features/help/  glossario e pulsante di spiegazione
   data/           normalizzazione, generatore, dataset
   storage/        IndexedDB
@@ -325,7 +371,7 @@ src/
 
 ---
 
-## 8. Integrazione continua
+## 9. Integrazione continua
 
 Due workflow con ruoli distinti:
 
@@ -337,9 +383,9 @@ Due workflow con ruoli distinti:
 Il deploy ripete i test di proposito: sono il cancello prima che una build
 raggiunga chi sta provando l'app.
 
-## 9. Test
+## 10. Test
 
-194 test, `npm test`.
+220 test, `npm test`.
 
 | Area | Copertura |
 | --- | --- |
@@ -353,16 +399,23 @@ raggiunga chi sta provando l'app.
 | Trasporto | connect, disconnect, calibrazione (ok e fallita), memoria piena, batteria scarica, pulsante fisico, trasferimento a chunk, **ripresa dopo caduta**, CRC |
 | Wi-Fi | comandi HTTP, mappatura dei codici di stato, dispositivo irraggiungibile, download con `Range`, **ripresa che riparte dai byte mancanti**, nessun timer lasciato attivo, blocco del contenuto misto |
 | Spiegazioni | ogni voce del glossario compilata, nome accessibile del pulsante, apertura e chiusura del dialogo |
+| Profilo | rifiuto del salvataggio senza consenso, revoca che elimina, persistenza dei valori |
+| Dati sanitari | non disponibile da browser, disponibile con ponte nativo, ponte della piattaforma sbagliata, permesso negato, valori non validi scartati, import senza consenso |
+| Account | identità locale sempre disponibile, Google non configurato, uscita che non cancella i dati, accesso che non e' consenso ai dati sanitari |
 | Export | round-trip JSON, CSV campioni, CSV riepilogo, quoting, hardtail |
 | UI | landing, onboarding, connessione, wizard bici, run, download, analisi, consiglio, storico, confronto, percorso hardtail |
 
 ---
 
-## 10. Cosa non è incluso
+## 11. Cosa non è incluso
 
 Per scelta, come da specifica: nessuna progettazione meccanica o elettronica,
 nessun firmware, nessun GPS o accelerometro, nessun machine learning, nessuna
 analisi cloud, nessuna integrazione con Strava o Garmin.
+
+Non c'e' backend, quindi non c'e' sincronizzazione fra dispositivi ne'
+validazione lato server dell'accesso. Sono i due pezzi da aggiungere quando
+servira', e l'architettura li accoglie senza riscritture.
 
 I documenti di riferimento citati nel brief (progetto generale, specifiche web
 app, motore, dati, UX writing, roadmap, datasheet) **non erano presenti nel

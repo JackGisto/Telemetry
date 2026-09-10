@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Card } from '@/design-system';
 import { useBikeStore, useDeviceStore, useSettingsStore } from '@/app/store';
 import { ConnectPanel } from '@/features/device/ConnectPanel';
+import { AccountPanel } from '@/features/profile/AccountPanel';
 import { BikeWizard } from '@/features/bike/BikeWizard';
 
-type Step = 'welcome' | 'device' | 'bike';
+type Step = 'welcome' | 'account' | 'device' | 'bike';
 
 /** First run: what this is, connect the device, configure the bike. Three steps. */
 export function OnboardingPage() {
@@ -20,13 +21,13 @@ export function OnboardingPage() {
     navigate('/app');
   };
 
-  const index = ['welcome', 'device', 'bike'].indexOf(step);
+  const index = ['welcome', 'account', 'device', 'bike'].indexOf(step);
 
   return (
     <main className="app-main" style={{ paddingBottom: 'var(--s-8)' }}>
       <div className="stack stack--5">
         <div className="steps" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2, 3].map((i) => (
             <span key={i} className={`steps__dot${i <= index ? ' steps__dot--done' : ''}`} />
           ))}
         </div>
@@ -55,16 +56,42 @@ export function OnboardingPage() {
               </ol>
             </Card>
 
-            <Button variant="primary" size="lg" block onClick={() => setStep('device')}>
+            <Button variant="primary" size="lg" block onClick={() => setStep('account')}>
               Iniziamo
             </Button>
+          </div>
+        )}
+
+        {step === 'account' && (
+          <div className="stack stack--5">
+            <div className="stack stack--2">
+              <span className="ds-label">Passo 2 di 4</span>
+              <h1 style={{ fontSize: 'var(--fs-h2)' }}>Vuoi un account?</h1>
+              <p className="muted">
+                Non serve. L’app funziona interamente sul telefono, offline, senza registrarsi. Un
+                account serve solo a identificarti se in futuro vorrai ritrovare i tuoi dati
+                altrove.
+              </p>
+            </div>
+
+            <AccountPanel onDone={() => setStep('device')} />
+
+            <div className="row" style={{ gap: 'var(--s-3)' }}>
+              <Button variant="ghost" onClick={() => setStep('welcome')}>
+                Indietro
+              </Button>
+              <div className="grow" />
+              <Button variant="ghost" onClick={() => setStep('device')}>
+                Decido dopo
+              </Button>
+            </div>
           </div>
         )}
 
         {step === 'device' && (
           <div className="stack stack--5">
             <div className="stack stack--2">
-              <span className="ds-label">Passo 2 di 3</span>
+              <span className="ds-label">Passo 3 di 4</span>
               <h1 style={{ fontSize: 'var(--fs-h2)' }}>Collega il dispositivo</h1>
               <p className="muted">
                 Puoi anche proseguire con il dispositivo simulato e collegare l’hardware più tardi.
@@ -74,7 +101,7 @@ export function OnboardingPage() {
             <ConnectPanel onConnected={() => setStep('bike')} />
 
             <div className="row" style={{ gap: 'var(--s-3)' }}>
-              <Button variant="ghost" onClick={() => setStep('welcome')}>
+              <Button variant="ghost" onClick={() => setStep('account')}>
                 Indietro
               </Button>
               <div className="grow" />
@@ -88,7 +115,7 @@ export function OnboardingPage() {
         {step === 'bike' && (
           <div className="stack stack--5">
             <div className="stack stack--2">
-              <span className="ds-label">Passo 3 di 3</span>
+              <span className="ds-label">Passo 4 di 4</span>
               <h1 style={{ fontSize: 'var(--fs-h2)' }}>Configura la bici</h1>
               <p className="muted">
                 Servono la corsa delle sospensioni e le regolazioni che hai davvero a disposizione:

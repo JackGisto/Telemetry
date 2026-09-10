@@ -6,7 +6,14 @@ import { IDBFactory } from 'fake-indexeddb';
 import { resetDbForTests } from '@/storage';
 import { MockTelemetryTransport } from '@/transport';
 import { AppRoutes } from './routes';
-import { useBikeStore, useDeviceStore, useHistoryStore, useSettingsStore } from './store';
+import {
+  useAccountStore,
+  useBikeStore,
+  useDeviceStore,
+  useHistoryStore,
+  useRiderStore,
+  useSettingsStore,
+} from './store';
 import { injectMockTransport } from './store/deviceStore';
 
 /**
@@ -21,6 +28,8 @@ beforeEach(() => {
   useSettingsStore.setState({ onboardingCompleted: false, activeBikeId: null, mode: 'standard' });
   useBikeStore.setState({ bikes: [], loading: false });
   useHistoryStore.setState({ sessions: [], reports: {}, loading: false });
+  useRiderStore.setState({ profile: null, loading: false, importing: null });
+  useAccountStore.setState({ account: null, signingIn: null, lastError: null });
   useDeviceStore.setState({
     transport: null,
     kind: null,
@@ -57,11 +66,26 @@ describe('onboarding', () => {
     await screen.findByRole('heading', { name: /misura come lavorano davvero/i });
   });
 
+  it('offre di proseguire senza account, senza imporre la registrazione', async () => {
+    const user = userEvent.setup();
+    renderApp('/onboarding');
+
+    await user.click(await screen.findByRole('button', { name: /iniziamo/i }));
+    await screen.findByRole('heading', { name: /vuoi un account\?/i });
+
+    // The product's promise is that it works with no account at all, so the
+    // no-account path must be present and must not be a dead end.
+    expect(screen.getByRole('button', { name: /continua senza account/i })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: /continua senza account/i }));
+    await screen.findByRole('heading', { name: /collega il dispositivo/i });
+  });
+
   it('porta dal benvenuto alla connessione del dispositivo simulato', async () => {
     const user = userEvent.setup();
     renderApp('/onboarding');
 
     await user.click(await screen.findByRole('button', { name: /iniziamo/i }));
+    await user.click(await screen.findByRole('button', { name: /decido dopo/i }));
     await screen.findByRole('heading', { name: /collega il dispositivo/i });
 
     // Web Bluetooth is unavailable under jsdom, so the app must say so plainly
@@ -80,6 +104,7 @@ describe('flusso completo con dispositivo simulato', () => {
   async function setUpBike(user: ReturnType<typeof userEvent.setup>) {
     renderApp('/onboarding');
     await user.click(await screen.findByRole('button', { name: /iniziamo/i }));
+    await user.click(await screen.findByRole('button', { name: /decido dopo/i }));
     await user.click(await screen.findByRole('button', { name: /salta per ora/i }));
     await screen.findByRole('heading', { name: /configura la bici/i });
 
@@ -178,6 +203,7 @@ describe('hardtail', () => {
     renderApp('/onboarding');
 
     await user.click(await screen.findByRole('button', { name: /iniziamo/i }));
+    await user.click(await screen.findByRole('button', { name: /decido dopo/i }));
     await user.click(await screen.findByRole('button', { name: /salta per ora/i }));
     await screen.findByRole('heading', { name: /configura la bici/i });
 

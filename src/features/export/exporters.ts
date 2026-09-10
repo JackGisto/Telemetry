@@ -76,6 +76,7 @@ export function summaryToCsv(session: Session, report: AnalysisReport | null): s
     ['run', 'trail', session.trail ?? ''],
     ['run', 'notes', session.notes ?? ''],
     ['setup', 'riding_style', bike.rider.style],
+    ['setup', 'rider_weight_kg', bike.rider.weightKg ?? ''],
     ['setup', 'front_travel_mm', bike.frontSuspension.totalTravelMm],
     ['setup', 'front_spring', bike.frontSuspension.springType],
     ['setup', 'front_pressure_psi', bike.frontSuspension.pressurePsi ?? ''],

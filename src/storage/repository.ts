@@ -1,7 +1,9 @@
+import type { Account } from '@/auth';
 import type {
   AnalysisReport,
   BikeConfig,
   CalibrationResult,
+  RiderHealthProfile,
   SagMeasurement,
   Session,
   SessionMeta,
@@ -111,6 +113,46 @@ export async function getSag(bikeId: string): Promise<SagMeasurement | undefined
   return db.get('sag', bikeId);
 }
 
+/**
+ * Writes the rider profile.
+ *
+ * Refuses without consent: health data must not reach storage on the strength
+ * of a half-filled form. The caller records consent first, or nothing is saved.
+ */
+export async function saveRiderProfile(profile: RiderHealthProfile): Promise<void> {
+  if (!profile.consentGiven) {
+    throw new Error('Consenso mancante: il profilo non viene salvato.');
+  }
+  const db = await getDb();
+  await db.put('rider', { ...profile, updatedAt: new Date().toISOString() }, 'me');
+}
+
+export async function getRiderProfile(): Promise<RiderHealthProfile | undefined> {
+  const db = await getDb();
+  return db.get('rider', 'me');
+}
+
+/** Withdrawing consent deletes the data, it does not merely hide it. */
+export async function deleteRiderProfile(): Promise<void> {
+  const db = await getDb();
+  await db.delete('rider', 'me');
+}
+
+export async function saveAccount(account: Account): Promise<void> {
+  const db = await getDb();
+  await db.put('account', account, 'me');
+}
+
+export async function getAccount(): Promise<Account | undefined> {
+  const db = await getDb();
+  return db.get('account', 'me');
+}
+
+export async function deleteAccount(): Promise<void> {
+  const db = await getDb();
+  await db.delete('account', 'me');
+}
+
 export async function loadSettings(): Promise<AppSettings> {
   const db = await getDb();
   const stored = (await db.get('settings', 'app')) as Partial<AppSettings> | undefined;
@@ -132,6 +174,8 @@ export async function clearAllData(): Promise<void> {
     'reports',
     'calibrations',
     'sag',
+    'rider',
+    'account',
     'settings',
   ] as const;
   const tx = db.transaction(stores, 'readwrite');

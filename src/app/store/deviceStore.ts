@@ -18,6 +18,7 @@ import {
 import { getCalibration, saveCalibration, saveSession } from '@/storage';
 import { newId } from '@/data/defaults';
 import { useBikeStore } from './bikeStore';
+import { useRiderStore } from './riderStore';
 
 export type ConnectionState = 'idle' | 'scanning' | 'connecting' | 'connected' | 'lost';
 
@@ -166,6 +167,13 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
       const payload = decodeSessionPayload(buffer);
       const localId = newId('run');
 
+      // Snapshot the rider's weight with the run: retuning the engine later
+      // needs to know the mass each run was ridden at.
+      const weightKg = useRiderStore.getState().profile?.weightKg;
+      const snapshot = weightKg
+        ? { ...bike, rider: { ...bike.rider, weightKg } }
+        : bike;
+
       await saveSession({
         id: localId,
         bikeId: bike.id,
@@ -175,7 +183,7 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
             ? (payload.samples[payload.samples.length - 1].t - payload.samples[0].t) / 1000
             : 0,
         sampleRateHz: payload.sampleRateHz,
-        setupSnapshot: bike,
+        setupSnapshot: snapshot,
         source: 'device',
         samples: payload.samples,
       });

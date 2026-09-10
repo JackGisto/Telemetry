@@ -213,24 +213,14 @@ export function BikeWizard({
             ))}
           </div>
 
-          <Field label="Peso rider (kg, opzionale)" htmlFor="rider-weight">
-            <input
-              id="rider-weight"
-              className="input"
-              type="number"
-              inputMode="decimal"
-              value={bike.rider.weightKg ?? ''}
-              onChange={(e) =>
-                setBike({
-                  ...bike,
-                  rider: {
-                    ...bike.rider,
-                    weightKg: e.target.value === '' ? undefined : Number(e.target.value),
-                  },
-                })
-              }
-            />
-          </Field>
+          {/*
+            Weight lives in the rider profile, not here: the same person on two
+            bikes weighs the same, and two editable copies would drift apart.
+          */}
+          <p className="text-sm muted">
+            Il tuo peso si imposta una volta sola nel profilo, in Impostazioni: vale per tutte le
+            tue bici.
+          </p>
         </Card>
       )}
 

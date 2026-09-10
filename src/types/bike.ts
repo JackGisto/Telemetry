@@ -48,7 +48,14 @@ export type RiderLevel = 'base' | 'intermediate' | 'advanced';
 export interface RiderProfile {
   style: RidingStyle;
   level?: RiderLevel;
-  /** Rider weight in kg, optional and never required by the V1 engine. */
+  /**
+   * Rider weight in kg.
+   *
+   * Kept for the run snapshot, so an exported run records the weight it was
+   * ridden at, but it is not editable per bike: the editable value lives in the
+   * rider profile (`RiderHealthProfile`), because the same person on two bikes
+   * weighs the same and two copies would drift apart.
+   */
   weightKg?: number;
 }
 

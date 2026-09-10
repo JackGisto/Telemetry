@@ -5,6 +5,11 @@ interface ImportMetaEnv {
   readonly VITE_APP_STORE_URL?: string;
   /** Set at build time once the Android app is published. */
   readonly VITE_PLAY_STORE_URL?: string;
+  /**
+   * Google OAuth client ID. Without it the Google sign-in option reports
+   * itself unavailable instead of failing when tapped.
+   */
+  readonly VITE_GOOGLE_CLIENT_ID?: string;
 }
 
 interface ImportMeta {

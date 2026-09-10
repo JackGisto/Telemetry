@@ -3,10 +3,12 @@ import type {
   AnalysisReport,
   BikeConfig,
   CalibrationResult,
+  RiderHealthProfile,
   SagMeasurement,
   Session,
   SessionMeta,
 } from '@/types';
+import type { Account } from '@/auth';
 
 /**
  * Local-first persistence. Everything the rider owns lives here and nowhere
@@ -45,11 +47,18 @@ interface TelemetryDB extends DBSchema {
   calibrations: { key: string; value: CalibrationResult & { bikeId: string } };
   /** Latest static sag measurement per bike. */
   sag: { key: string; value: SagMeasurement };
+  /**
+   * The rider's own profile. Health data, so a single record guarded by
+   * explicit consent rather than something scattered across other stores.
+   */
+  rider: { key: string; value: RiderHealthProfile };
+  /** The signed-in account, or the local identity. One record. */
+  account: { key: string; value: Account };
   settings: { key: string; value: unknown };
 }
 
 const DB_NAME = 'mtb-telemetry';
-const DB_VERSION = 2;
+const DB_VERSION = 4;
 
 let dbPromise: Promise<IDBPDatabase<TelemetryDB>> | null = null;
 
@@ -76,6 +85,10 @@ export function getDb(): Promise<IDBPDatabase<TelemetryDB>> {
         if (!db.objectStoreNames.contains('sag')) {
           db.createObjectStore('sag', { keyPath: 'bikeId' });
         }
+        // Added in version 3.
+        if (!db.objectStoreNames.contains('rider')) db.createObjectStore('rider');
+        // Added in version 4.
+        if (!db.objectStoreNames.contains('account')) db.createObjectStore('account');
         if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings');
       },
     });
