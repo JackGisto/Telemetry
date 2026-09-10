@@ -13,6 +13,7 @@ import { ScreenHeader } from '@/app/AppShell';
 import { useBikeStore, useDeviceStore, useHistoryStore } from '@/app/store';
 import { ConnectPanel } from '@/features/device/ConnectPanel';
 import { CalibrationPanel } from '@/features/calibration/CalibrationPanel';
+import { SagPanel, useSagStatus } from '@/features/sag/SagPanel';
 import { TermInfo } from '@/features/help/TermInfo';
 import { formatDateTime, formatDuration } from '@/features/analysis/presentation';
 
@@ -39,6 +40,7 @@ export function RunPage() {
     calibration,
   } = useDeviceStore();
   const bike = useBikeStore((s) => s.activeBike());
+  const sagStatus = useSagStatus();
   const reloadHistory = useHistoryStore((s) => s.load);
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -180,11 +182,29 @@ export function RunPage() {
                   label={calibrated ? 'Valida' : 'Da eseguire'}
                 />
               </div>
+              <div className="row row--between text-sm">
+                <span className="info-label muted">
+                  <span>Sag</span>
+                  <TermInfo id="sag" />
+                </span>
+                <StatusIndicator
+                  tone={sagStatus ? (sagStatus.ok ? 'ok' : 'warn') : 'neutral'}
+                  label={
+                    sagStatus
+                      ? sagStatus.ok
+                        ? 'Corretto'
+                        : 'Fuori intervallo'
+                      : 'Non misurato'
+                  }
+                />
+              </div>
             </div>
           </Card>
         )}
 
         {connection === 'connected' && !calibrated && <CalibrationPanel />}
+
+        {connection === 'connected' && calibrated && !sagStatus && <SagPanel />}
 
         {connection === 'connected' && calibrated && (
           <Button

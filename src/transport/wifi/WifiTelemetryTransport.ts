@@ -2,6 +2,7 @@ import type {
   CalibrationResult,
   DeviceInfo,
   DeviceStatus,
+  PositionReading,
   SessionInfo,
   TransferProgress,
   TransportKind,
@@ -96,6 +97,10 @@ export class WifiTelemetryTransport implements TelemetryTransport {
 
   async listSessions(): Promise<SessionInfo[]> {
     return (await this.request(ROUTES.sessions)).json() as Promise<SessionInfo[]>;
+  }
+
+  async readPosition(): Promise<PositionReading> {
+    return (await this.request(ROUTES.position)).json() as Promise<PositionReading>;
   }
 
   /**

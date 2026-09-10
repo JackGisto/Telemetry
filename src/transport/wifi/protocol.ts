@@ -26,6 +26,8 @@ export const ROUTES = {
   startRun: '/api/run/start',
   stopRun: '/api/run/stop',
   calibrate: '/api/calibrate',
+  /** Instantaneous suspension position, used by the static sag procedure. */
+  position: '/api/position',
   sessions: '/api/sessions',
   /** GET for download (honours `Range`), DELETE to free the unit's storage. */
   session: (id: string) => `/api/sessions/${encodeURIComponent(id)}`,

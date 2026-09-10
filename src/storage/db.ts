@@ -1,5 +1,12 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { AnalysisReport, BikeConfig, CalibrationResult, Session, SessionMeta } from '@/types';
+import type {
+  AnalysisReport,
+  BikeConfig,
+  CalibrationResult,
+  SagMeasurement,
+  Session,
+  SessionMeta,
+} from '@/types';
 
 /**
  * Local-first persistence. Everything the rider owns lives here and nowhere
@@ -36,11 +43,13 @@ interface TelemetryDB extends DBSchema {
   samples: { key: string; value: { sessionId: string; samples: Session['samples'] } };
   reports: { key: string; value: AnalysisReport };
   calibrations: { key: string; value: CalibrationResult & { bikeId: string } };
+  /** Latest static sag measurement per bike. */
+  sag: { key: string; value: SagMeasurement };
   settings: { key: string; value: unknown };
 }
 
 const DB_NAME = 'mtb-telemetry';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<TelemetryDB>> | null = null;
 
@@ -61,6 +70,11 @@ export function getDb(): Promise<IDBPDatabase<TelemetryDB>> {
         }
         if (!db.objectStoreNames.contains('calibrations')) {
           db.createObjectStore('calibrations', { keyPath: 'bikeId' });
+        }
+        // Added in version 2; existing databases gain the store on upgrade
+        // without touching anything the rider already has.
+        if (!db.objectStoreNames.contains('sag')) {
+          db.createObjectStore('sag', { keyPath: 'bikeId' });
         }
         if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings');
       },

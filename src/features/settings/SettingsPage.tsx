@@ -6,6 +6,7 @@ import { bleAvailability } from '@/transport';
 import { clearAllData, saveSession } from '@/storage';
 import { newId } from '@/data/defaults';
 import { ScreenHeader } from '@/app/AppShell';
+import { BUILD_INFO, buildLabel } from '@/app/buildInfo';
 import { useBikeStore, useHistoryStore, useSettingsStore } from '@/app/store';
 import { parseJson } from '@/features/export/exporters';
 import { readTextFile } from '@/features/export/download';
@@ -116,8 +117,18 @@ export function SettingsPage() {
           </Button>
         </Card>
 
-        <Card className="stack stack--2 text-sm muted">
+        <Card className="stack stack--3 text-sm muted">
           <span className="ds-label">Informazioni</span>
+          <div className="row row--between">
+            <span>Versione app</span>
+            <span className="ds-mono">v{BUILD_INFO.version}</span>
+          </div>
+          <div className="row row--between">
+            <span>Build</span>
+            <span className="ds-mono">
+              {BUILD_INFO.commit} · {BUILD_INFO.date}
+            </span>
+          </div>
           <div className="row row--between">
             <span>Motore di analisi</span>
             <span className="ds-mono">v{ENGINE_VERSION}</span>
@@ -127,9 +138,28 @@ export function SettingsPage() {
             <span className="ds-mono">{ble.usable ? 'disponibile' : 'non disponibile'}</span>
           </div>
           <p className="text-xs faint">
-            Il protocollo BLE definitivo non è ancora congelato: gli identificativi GATT usati
-            dall’app sono segnaposto e verranno allineati al firmware.
+            Il protocollo del dispositivo non è ancora congelato: gli indirizzi e gli
+            identificativi usati dall’app sono segnaposto e verranno allineati al firmware.
           </p>
+          {/* A tester reporting a problem needs to say which build they saw it on. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              void navigator.clipboard
+                ?.writeText(buildLabel())
+                .then(() => toast.push({ tone: 'ok', title: 'Versione copiata' }))
+                .catch(() =>
+                  toast.push({
+                    tone: 'warn',
+                    title: 'Copia non riuscita',
+                    body: buildLabel(),
+                  }),
+                );
+            }}
+          >
+            Copia versione per una segnalazione
+          </Button>
         </Card>
       </div>
 

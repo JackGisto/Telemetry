@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card, ConfirmModal, EmptyState } from '@/design-system';
 import { ScreenHeader } from '@/app/AppShell';
 import { useBikeStore, useSettingsStore } from '@/app/store';
+import { SagPanel } from '@/features/sag/SagPanel';
 import { BikeWizard } from './BikeWizard';
 
 /** Bike list and editor. */
@@ -87,6 +88,10 @@ export function BikePage() {
             </Card>
           );
         })}
+      </div>
+
+      <div style={{ marginTop: 'var(--s-4)' }}>
+        <SagPanel />
       </div>
 
       <ConfirmModal

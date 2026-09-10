@@ -19,6 +19,7 @@ export interface GlossaryTerm {
 }
 
 export type GlossaryId =
+  | 'sag'
   | 'travel'
   | 'travel-max'
   | 'travel-mean'
@@ -55,6 +56,15 @@ export type GlossaryId =
   | 'percentile';
 
 export const GLOSSARY: Record<GlossaryId, GlossaryTerm> = {
+  sag: {
+    term: 'Sag',
+    body: [
+      'Il sag e\u2019 quanto la sospensione affonda sotto il tuo peso, a bici ferma e con te in sella nella posizione di guida. Si esprime in percentuale della corsa.',
+      'E\u2019 la prima regolazione da sistemare, perche\u2019 decide l\u2019altezza a cui la bici viaggia e quindi come si comporta in curva e in frenata. Tutto il resto si regola dopo.',
+    ],
+    tip: 'Poco sag e la bici resta rigida e nervosa. Troppo sag e si siede, perde geometria e finisce la corsa troppo presto.',
+  },
+
   travel: {
     term: 'Corsa (travel)',
     body: [

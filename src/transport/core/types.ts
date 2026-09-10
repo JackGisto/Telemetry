@@ -2,6 +2,7 @@ import type {
   CalibrationResult,
   DeviceInfo,
   DeviceStatus,
+  PositionReading,
   SessionInfo,
   TransferProgress,
   TransportKind,
@@ -32,6 +33,15 @@ export interface TelemetryTransport {
   downloadSession(id: string, onProgress?: (p: TransferProgress) => void): Promise<ArrayBuffer>;
   /** Free space on the device once a session has been stored locally. */
   deleteSession?(id: string): Promise<void>;
+
+  /**
+   * Instantaneous suspension position, in mm of travel used.
+   *
+   * Optional because it is an extension beyond the original transport contract:
+   * the static sag procedure needs it, run recording does not. A transport that
+   * does not implement it makes the sag screen unavailable rather than wrong.
+   */
+  readPosition?(): Promise<PositionReading>;
 
   /** Fires on unsolicited status changes, including the device's own button. */
   onStatusChange(listener: (status: DeviceStatus) => void): () => void;

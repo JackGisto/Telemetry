@@ -24,6 +24,14 @@ export interface StyleProfile {
   recoveryTimeSec: [number, number];
   /** Target dynamic ride height, in % of travel. */
   rideHeightPct: [number, number];
+  /**
+   * Target static sag, in % of travel: fork first, then shock.
+   *
+   * These follow the ranges suspension manufacturers publish for each kind of
+   * riding, which is what a rider will have been told elsewhere. Like every
+   * other threshold here they are meant to be adjusted once real runs exist.
+   */
+  sagPct: { front: [number, number]; rear: [number, number] };
 }
 
 export interface Tunables {
@@ -94,6 +102,13 @@ export interface Tunables {
   bandFractionPerClick: number;
   /** Max recommendations surfaced in Standard mode. */
   maxStandardRecommendations: number;
+  /**
+   * Sample spread, in mm, above which the rider was not holding still enough
+   * for the sag reading to be trusted.
+   */
+  sagStabilityMaxMm: number;
+  /** Number of position samples averaged for one sag measurement. */
+  sagSampleCount: number;
 }
 
 const style = (
@@ -105,12 +120,15 @@ const style = (
   bottomOut: [number, number],
   recovery: [number, number],
   rideHeight: [number, number],
+  sagFront: [number, number],
+  sagRear: [number, number],
 ): StyleProfile => ({
   label,
   front: { maxTravelPct: frontMax, meanTravelPct: frontMean, bottomOutPerMin: bottomOut },
   rear: { maxTravelPct: rearMax, meanTravelPct: rearMean, bottomOutPerMin: bottomOut },
   recoveryTimeSec: recovery,
   rideHeightPct: rideHeight,
+  sagPct: { front: sagFront, rear: sagRear },
 });
 
 export const DEFAULT_TUNABLES: Tunables = {
@@ -136,10 +154,19 @@ export const DEFAULT_TUNABLES: Tunables = {
 
   styles: {
     // Comfort riders should use the stroke fully but rarely reach the end.
-    comfort: style('Comfort', [82, 93], [22, 34], [80, 92], [24, 36], [0, 0.4], [0.28, 0.48], [20, 34]),
-    balanced: style('Bilanciato', [88, 97], [20, 32], [86, 96], [22, 34], [0, 0.8], [0.22, 0.4], [17, 30]),
+    comfort: style(
+      'Comfort', [82, 93], [22, 34], [80, 92], [24, 36], [0, 0.4], [0.28, 0.48], [20, 34],
+      [18, 25], [28, 35],
+    ),
+    balanced: style(
+      'Bilanciato', [88, 97], [20, 32], [86, 96], [22, 34], [0, 0.8], [0.22, 0.4], [17, 30],
+      [15, 20], [25, 30],
+    ),
     // Aggressive riders expect to touch the end of the stroke on big hits.
-    aggressive: style('Aggressivo', [92, 100], [18, 30], [90, 100], [20, 32], [0.2, 1.6], [0.16, 0.32], [14, 26]),
+    aggressive: style(
+      'Aggressivo', [92, 100], [18, 30], [90, 100], [20, 32], [0.2, 1.6], [0.16, 0.32], [14, 26],
+      [12, 18], [22, 28],
+    ),
   },
 
   severityWeight: { info: 0, minor: 6, moderate: 14, major: 26 },
@@ -149,6 +176,8 @@ export const DEFAULT_TUNABLES: Tunables = {
   secPerReboundClick: 0.06,
   bandFractionPerClick: 0.07,
   maxStandardRecommendations: 3,
+  sagStabilityMaxMm: 2.5,
+  sagSampleCount: 12,
 };
 
 export function withOverrides(overrides?: Partial<Tunables>): Tunables {

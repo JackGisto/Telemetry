@@ -299,6 +299,7 @@ export function BandMeter({
   band,
   unit = '%',
   info,
+  scaleMax: scaleMaxOverride,
 }: {
   label: string;
   value: number;
@@ -306,8 +307,14 @@ export function BandMeter({
   unit?: string;
   /** Optional explanation control rendered next to the label. */
   info?: React.ReactNode;
+  /**
+   * Upper end of the scale. Worth setting when the target band is narrow
+   * relative to the natural 0-100 range: sag sits in a 5-point window, which
+   * would otherwise be drawn as an invisible sliver.
+   */
+  scaleMax?: number;
 }) {
-  const scaleMax = Math.max(100, band[1] * 1.1, value * 1.1);
+  const scaleMax = scaleMaxOverride ?? Math.max(100, band[1] * 1.1, value * 1.1);
   const pct = (v: number) => `${Math.min(100, (v / scaleMax) * 100)}%`;
   const inside = value >= band[0] && value <= band[1];
 

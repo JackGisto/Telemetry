@@ -1,4 +1,11 @@
-import type { AnalysisReport, BikeConfig, CalibrationResult, Session, SessionMeta } from '@/types';
+import type {
+  AnalysisReport,
+  BikeConfig,
+  CalibrationResult,
+  SagMeasurement,
+  Session,
+  SessionMeta,
+} from '@/types';
 import { DEFAULT_SETTINGS, getDb, type AppSettings } from './db';
 
 /** Every read and write the app performs. Nothing else touches IndexedDB. */
@@ -94,6 +101,16 @@ export async function getCalibration(bikeId: string): Promise<CalibrationResult 
   return db.get('calibrations', bikeId);
 }
 
+export async function saveSag(measurement: SagMeasurement): Promise<void> {
+  const db = await getDb();
+  await db.put('sag', measurement);
+}
+
+export async function getSag(bikeId: string): Promise<SagMeasurement | undefined> {
+  const db = await getDb();
+  return db.get('sag', bikeId);
+}
+
 export async function loadSettings(): Promise<AppSettings> {
   const db = await getDb();
   const stored = (await db.get('settings', 'app')) as Partial<AppSettings> | undefined;
@@ -108,7 +125,15 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
 /** Full local wipe, offered in Settings. */
 export async function clearAllData(): Promise<void> {
   const db = await getDb();
-  const stores = ['bikes', 'sessions', 'samples', 'reports', 'calibrations', 'settings'] as const;
+  const stores = [
+    'bikes',
+    'sessions',
+    'samples',
+    'reports',
+    'calibrations',
+    'sag',
+    'settings',
+  ] as const;
   const tx = db.transaction(stores, 'readwrite');
   await Promise.all([...stores.map((s) => tx.objectStore(s).clear()), tx.done]);
 }

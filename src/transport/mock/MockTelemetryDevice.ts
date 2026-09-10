@@ -2,6 +2,7 @@ import type {
   CalibrationResult,
   DeviceInfo,
   DeviceStatus,
+  PositionReading,
   SessionInfo,
 } from '@/types';
 import { DATASETS, datasetSamples, getDataset } from '@/data/datasets';
@@ -23,6 +24,19 @@ export interface MockDeviceOptions {
   startCalibrated?: boolean;
   /** Sessions already stored on the device at startup. */
   preloadedDatasetIds?: string[];
+  /**
+   * Sag the simulated bike settles at, as a fraction of travel, so the sag
+   * screen can be exercised in and out of band.
+   */
+  sag?: { front: number; rear: number };
+  /**
+   * Travel of the simulated hardware. The real unit reports millimetres, so the
+   * mock needs its own stroke to synthesise a plausible reading; it is a
+   * property of the simulated bike, not something the caller passes in.
+   */
+  travelMm?: { front: number; rear: number | null };
+  /** Make the simulated rider wobble, to exercise the instability path. */
+  unstableSag?: boolean;
 }
 
 interface StoredSession {
@@ -221,5 +235,21 @@ export class MockTelemetryDevice {
   setBattery(percent: number): void {
     this.status.batteryPercent = percent;
     this.emit();
+  }
+
+  /**
+   * Instantaneous position, as the real unit would report while the rider sits
+   * on the bike. Values carry a little noise so the stability check is
+   * genuinely exercised rather than fed a perfect constant.
+   */
+  readPosition(): PositionReading {
+    const sag = this.options.sag ?? { front: 0.18, rear: 0.27 };
+    const travel = this.options.travelMm ?? { front: 160, rear: 60 };
+    const noise = this.options.unstableSag ? 6 : 0.4;
+    const jitter = () => (Math.random() - 0.5) * noise;
+    return {
+      frontMm: Math.max(0, travel.front * sag.front + jitter()),
+      rearMm: travel.rear === null ? null : Math.max(0, travel.rear * sag.rear + jitter()),
+    };
   }
 }

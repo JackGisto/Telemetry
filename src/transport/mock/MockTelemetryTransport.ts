@@ -2,6 +2,7 @@ import type {
   CalibrationResult,
   DeviceInfo,
   DeviceStatus,
+  PositionReading,
   SessionInfo,
   TransferProgress,
   TransportKind,
@@ -108,6 +109,11 @@ export class MockTelemetryTransport implements TelemetryTransport {
   async deleteSession(id: string): Promise<void> {
     this.assertConnected();
     this.device.deleteSession(id);
+  }
+
+  async readPosition(): Promise<PositionReading> {
+    this.assertConnected();
+    return this.device.readPosition();
   }
 
   onStatusChange(listener: (status: DeviceStatus) => void): () => void {

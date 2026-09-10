@@ -11,7 +11,7 @@ connessione e ripresa.
 ```bash
 npm install
 npm run dev            # http://localhost:5173 → landing page; /app → applicazione
-npm test               # 171 test su motore, dati, trasporto, export e flussi UI
+npm test               # 194 test su motore, dati, trasporto, export e flussi UI
 npm run build          # build di produzione
 npm run build:preview  # demo in un unico file HTML, apribile senza server
 npm run build:pages    # build per GitHub Pages (usa BASE_PATH)
@@ -121,6 +121,10 @@ i grafici hanno `aria-label` descrittivi; il focus è sempre visibile.
 
 ### Spiegazioni contestuali
 
+Le voci mostrate in Impostazioni includono versione app, commit e data della
+build, con un pulsante che le copia: senza quello una segnalazione di un tester
+non si lega a una versione precisa.
+
 Ogni voce che un rider non esperto non riconoscerebbe ha accanto una **"i"**
 che apre una spiegazione in linguaggio semplice: cos'è, come si legge il numero
 e cosa comporta in pratica. Copre metriche, grafici, diagnosi, score e tutti i
@@ -151,6 +155,30 @@ dicono "in arrivo". Nessun link finto. L'installazione PWA usa
 Deterministico e rule-based. Nessun machine learning, nessun modello predittivo,
 nessun servizio cloud. Lo stesso input dà sempre lo stesso output — c'è un test
 che lo verifica.
+
+### Sag statico
+
+Prima di qualunque run c'e' una misura che non si ricava dai dati: il **sag**,
+cioe' quanto la sospensione affonda sotto il peso del rider a bici ferma. E' la
+regolazione da cui parte ogni assetto.
+
+La procedura e' guidata: il rider si mette in sella, resta immobile, e l'app
+raccoglie una serie di letture di posizione dal dispositivo. Se l'oscillazione
+supera la soglia, la misura viene **rifiutata**: un sag preso mentre la bici
+dondola e' peggio di nessun sag, perche' sembra altrettanto autorevole.
+
+Il verdetto confronta il sag con la banda dello stile scelto e produce un
+consiglio concreto, con la stessa regola inderogabile delle raccomandazioni di
+run: mai una regolazione che la sospensione non possiede.
+
+Il sag e' tenuto **separato** dall'analisi della run. Sono due misure diverse:
+il sag e' statico, l'altezza di marcia e' dinamica. Confonderle darebbe un
+numero solo, piu' comodo e meno vero.
+
+La lettura di posizione e' una primitiva **opzionale** del trasporto
+(`readPosition`), implementata su Wi-Fi e sul dispositivo simulato. Un canale
+che non la offre rende la schermata non disponibile, con una spiegazione,
+invece di dare un risultato sbagliato.
 
 **Pipeline:** `metriche → diagnosi → scoring → raccomandazioni`
 
@@ -297,15 +325,29 @@ src/
 
 ---
 
-## 8. Test
+## 8. Integrazione continua
 
-171 test, `npm test`.
+Due workflow con ruoli distinti:
+
+| Workflow | Quando | Cosa fa |
+| --- | --- | --- |
+| `ci.yml` | ogni push e ogni pull request | typecheck, test, build |
+| `deploy-pages.yml` | push sul branch di sviluppo | test, poi pubblica su Pages |
+
+Il deploy ripete i test di proposito: sono il cancello prima che una build
+raggiunga chi sta provando l'app.
+
+## 9. Test
+
+194 test, `npm test`.
 
 | Area | Copertura |
 | --- | --- |
 | Motore | conversione posizione, percentuali, istogramma, bottom-out, rebound, compressione, scoring, diagnosi, determinismo, hardtail, run non analizzabili |
 | Velocità e assetto | normalizzazione dell'istogramma, segno di ritorno e compressione, valori fuori scala, split alla soglia, altezza di marcia non falsata dai colpi |
 | Regole di smorzamento | durezza sui colpi, impaccamento, sostegno alle basse velocità, silenzio quando i dati non bastano e quando la diagnosi sarebbe un doppione |
+| Sag | calcolo su due canali, bande per stile, rifiuto della misura instabile, hardtail, consigli per aria/molla/precarico/nessuna regolazione, limite del passo |
+| Flusso sag | dispositivo assente, sag corretto, sag eccessivo con PSI indicati, rider che si muove, persistenza, canale che non legge la posizione |
 | Raccomandazioni | aria/molla/precarico/nessuna regolazione, scelta del circuito LS/HS, direzione e limiti delle modifiche, deduplica |
 | Data layer | salvataggio, lettura, aggiornamento note, cancellazione a cascata, impostazioni, wipe |
 | Trasporto | connect, disconnect, calibrazione (ok e fallita), memoria piena, batteria scarica, pulsante fisico, trasferimento a chunk, **ripresa dopo caduta**, CRC |
@@ -316,7 +358,7 @@ src/
 
 ---
 
-## 9. Cosa non è incluso
+## 10. Cosa non è incluso
 
 Per scelta, come da specifica: nessuna progettazione meccanica o elettronica,
 nessun firmware, nessun GPS o accelerometro, nessun machine learning, nessuna
