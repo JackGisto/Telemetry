@@ -8,3 +8,4 @@ coverage
 dist-preview
 preview-artifact.html
 tsconfig.tsbuildinfo
+shot.mjs
