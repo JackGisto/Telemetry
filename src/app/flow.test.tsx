@@ -151,16 +151,65 @@ describe('flusso completo con dispositivo simulato', () => {
 
     // Analysis opens automatically once the transfer completes.
     await screen.findByRole('heading', { name: 'Analisi' }, { timeout: 5000 });
-    await screen.findByText(/azione consigliata/i);
 
-    // Standard mode: a verdict per component and an actionable instruction.
+    // Standard mode: a verdict per component and one actionable instruction.
     expect(screen.getByText('Forcella')).toBeInTheDocument();
     expect(screen.getByText('Posteriore')).toBeInTheDocument();
     expect(screen.getByText(/aggiungi \d+ psi al posteriore/i)).toBeInTheDocument();
 
-    // At most three recommendations in Standard mode.
-    expect(screen.getAllByRole('listitem').length).toBeLessThanOrEqual(3);
+    // The instruction must be actionable: start value, end value, and how to
+    // perform it. "Add 5 PSI" alone leaves the rider doing arithmetic.
+    expect(screen.getByText(/pressione del posteriore/i)).toBeInTheDocument();
+    expect(screen.getByText('180')).toBeInTheDocument();
+    expect(screen.getByText(/cosa dovresti sentire/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /come si fa/i }));
+    expect(screen.getByText(/pompa da sospensioni/i)).toBeInTheDocument();
+
+    // Only one action is offered at a time: two changes at once would make the
+    // next run impossible to attribute.
+    expect(screen.getByRole('button', { name: /ho fatto questa modifica/i })).toBeEnabled();
   }, 20000);
+
+  it('registrare la modifica aggiorna il setup e prepara il confronto', async () => {
+    const user = userEvent.setup();
+    await setUpBike(user);
+
+    injectMockTransport(
+      MockTelemetryTransport.withOptions({
+        speed: 0,
+        startCalibrated: true,
+        preloadedDatasetIds: ['soft_shock'],
+      }),
+    );
+    await act(async () => {
+      await useDeviceStore.getState().connect('mock');
+      const [session] = useDeviceStore.getState().sessions;
+      await useDeviceStore.getState().downloadSession(session.id);
+      await useHistoryStore.getState().load();
+    });
+
+    const before = useBikeStore.getState().activeBike()!;
+    const startPressure = before.rearSuspension.present
+      ? before.rearSuspension.pressurePsi
+      : undefined;
+
+    renderApp(`/app/analisi/${useHistoryStore.getState().sessions[0].id}`);
+    await screen.findByRole('heading', { name: 'Analisi' }, { timeout: 5000 });
+
+    await user.click(await screen.findByRole('button', { name: /ho fatto questa modifica/i }));
+
+    // The stored setup moves with the bike, so the next run's snapshot is
+    // accurate and the comparison shows what actually changed.
+    await waitFor(() => {
+      const after = useBikeStore.getState().activeBike()!;
+      const endPressure = after.rearSuspension.present
+        ? after.rearSuspension.pressurePsi
+        : undefined;
+      expect(endPressure).not.toBe(startPressure);
+    });
+    expect(await screen.findByText(/registrata nel setup/i)).toBeInTheDocument();
+  }, 25000);
 
   it('salva la run nello storico e ne permette il confronto', async () => {
     const user = userEvent.setup();

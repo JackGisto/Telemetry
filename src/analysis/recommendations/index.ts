@@ -28,7 +28,23 @@ function unitFor(bike: BikeConfig, component: SuspensionComponent): SuspensionCo
   return bike.rearSuspension.present ? bike.rearSuspension : null;
 }
 
-const NAME: Record<SuspensionComponent, string> = { front: 'forcella', rear: 'posteriore' };
+/**
+ * Italian needs the article to agree with the noun's gender: "forcella" is
+ * feminine, "posteriore" masculine. Storing the inflected forms keeps the
+ * generated sentences grammatical instead of producing "il forcella".
+ */
+/** With the definite article: subject position. */
+const THE: Record<SuspensionComponent, string> = {
+  front: 'la forcella',
+  rear: 'il posteriore',
+};
+/** After "su". */
+const ON: Record<SuspensionComponent, string> = {
+  front: 'sulla forcella',
+  rear: 'sul posteriore',
+};
+
+const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 const hasPressure = (u: SuspensionConfig) => u.springType === 'air' && u.pressurePsi !== undefined;
 const hasPreload = (u: SuspensionConfig) => u.preload?.available === true;
@@ -84,14 +100,14 @@ function springAction(
   if (unit.springType === 'coil') {
     return {
       action: { kind: 'spring-rate', component, direction },
-      title: `Valuta una molla più ${direction === 'stiffer' ? 'dura' : 'morbida'} sul ${NAME[component]}`,
+      title: `Valuta una molla più ${direction === 'stiffer' ? 'dura' : 'morbida'} ${ON[component]}`,
       learned: false,
     };
   }
 
   return {
     action: { kind: 'explain', component },
-    title: `Il ${NAME[component]} lavora fuori range, ma non ha regolazioni disponibili`,
+    title: `${capitalise(THE[component])} lavora fuori range, ma non ha regolazioni disponibili`,
     learned: false,
   };
 }
@@ -280,7 +296,7 @@ export function buildRecommendations(
           priority,
           action,
           title,
-          rationale: `${d.description} Ammorbidire il ${NAME[component]} gli permette di usare più corsa e di copiare meglio il terreno.${
+          rationale: `${d.description} Ammorbidire ${THE[component]} ${component === 'front' ? 'le' : 'gli'} permette di usare più corsa e di copiare meglio il terreno.${
             learned ? ' La quantità è calcolata su come la tua bici ha risposto alle modifiche precedenti.' : ''
           }`,
           causes: [d.id],
@@ -309,7 +325,7 @@ export function buildRecommendations(
           priority,
           action,
           title,
-          rationale: `${d.description} Irrigidire il ${NAME[component]} recupera margine sul finale di corsa.${
+          rationale: `${d.description} Irrigidire ${THE[component]} recupera margine sul finale di corsa.${
             learned ? ' La quantità è calcolata su come la tua bici ha risposto alle modifiche precedenti.' : ''
           }`,
           causes: [d.id],
@@ -325,7 +341,7 @@ export function buildRecommendations(
               priority: priority - 0.1,
               action: comp.action,
               title: comp.title,
-              rationale: `Senza regolazioni sulla molla, un click di compressione in più sostiene il ${NAME[component]} a metà corsa.`,
+              rationale: `Senza regolazioni sulla molla, un click di compressione in più sostiene ${THE[component]} a metà corsa.`,
               causes: [d.id],
             }, unit));
           }
@@ -350,7 +366,7 @@ export function buildRecommendations(
             id: '',
             priority: priority - 0.5,
             action: { kind: 'explain', component },
-            title: `Il ${NAME[component]} risulta duro sui colpi secchi`,
+            title: `${capitalise(THE[component])} risulta ${component === 'front' ? 'dura' : 'duro'} sui colpi secchi`,
             rationale: `${d.description} Questa sospensione non ha una regolazione della compressione, quindi la strada resta ammorbidire la molla.`,
             causes: [d.id],
           }, unit));
@@ -425,7 +441,7 @@ export function buildRecommendations(
             id: '',
             priority: priority - 0.5,
             action: { kind: 'explain', component },
-            title: `Il ritorno del ${NAME[component]} è fuori range`,
+            title: `Il ritorno ${OF[component]} è fuori range`,
             rationale: `${d.description} Questa sospensione non ha una regolazione del rebound, quindi non c'è una modifica da fare.`,
             causes: [d.id],
           }, unit));

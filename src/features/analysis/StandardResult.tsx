@@ -1,6 +1,10 @@
-import type { AnalysisReport, Recommendation } from '@/types';
-import { Badge, Card } from '@/design-system';
+import { useState } from 'react';
+import type { AnalysisReport, BikeConfig, Recommendation } from '@/types';
+import type { SetupLearning } from '@/analysis';
+import { Badge, Button, Card } from '@/design-system';
 import { TermInfo } from '@/features/help/TermInfo';
+import { ActionCard } from './ActionCard';
+import { LearnedPanel } from './LearnedPanel';
 import {
   BALANCE_LABEL,
   BALANCE_TONE,
@@ -19,12 +23,20 @@ import {
  */
 export function StandardResult({
   report,
+  bike,
+  learning,
   maxRecommendations = 3,
 }: {
   report: AnalysisReport;
+  /** Needed to write an applied change back into the setup. */
+  bike?: BikeConfig;
+  /** What previous runs taught, shown so the numbers can be trusted. */
+  learning?: SetupLearning;
   maxRecommendations?: number;
 }) {
+  const [showOthers, setShowOthers] = useState(false);
   const recommendations = report.recommendations.slice(0, maxRecommendations);
+  const [primary, ...others] = recommendations;
   const tone = scoreTone(report.scores.overall);
 
   return (
@@ -96,16 +108,55 @@ export function StandardResult({
         )}
       </Card>
 
-      {recommendations.length > 0 && (
-        <Card>
-          <h2 className="card__title">Azione consigliata</h2>
-          <ol className="rec-list">
-            {recommendations.map((rec, index) => (
-              <RecommendationRow key={rec.id} rec={rec} index={index + 1} />
-            ))}
-          </ol>
-        </Card>
+      {primary && (
+        <div className="stack stack--3">
+          <span className="ds-label">
+            {others.length > 0 ? 'Fai prima questa' : 'Azione consigliata'}
+          </span>
+
+          {bike ? (
+            <ActionCard recommendation={primary} index={1} bike={bike} />
+          ) : (
+            <Card>
+              <ol className="rec-list">
+                <RecommendationRow rec={primary} index={1} />
+              </ol>
+            </Card>
+          )}
+
+          {others.length > 0 && (
+            <>
+              <p className="text-sm muted">
+                Cambia una cosa per volta: se ne cambi due, la run successiva non dice quale delle
+                due ha funzionato.
+              </p>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-expanded={showOthers}
+                onClick={() => setShowOthers((open) => !open)}
+              >
+                {showOthers
+                  ? 'Nascondi le altre'
+                  : `Altre ${others.length} ${others.length === 1 ? 'modifica' : 'modifiche'} da fare dopo`}
+              </Button>
+
+              {showOthers && (
+                <Card>
+                  <ol className="rec-list">
+                    {others.map((rec, index) => (
+                      <RecommendationRow key={rec.id} rec={rec} index={index + 2} />
+                    ))}
+                  </ol>
+                </Card>
+              )}
+            </>
+          )}
+        </div>
       )}
+
+      {learning && <LearnedPanel learning={learning} />}
 
       {report.warnings.length > 0 && (
         <Card className="stack stack--2">
@@ -129,7 +180,11 @@ function RecommendationRow({ rec, index }: { rec: Recommendation; index: number 
       </span>
       <div className="grow">
         <div className="rec__title">{rec.title}</div>
-        <div className="rec__meta">{actionSummary(rec)}</div>
+        <div className="rec__meta">
+          {rec.change
+            ? `${rec.change.label}: da ${rec.change.from} a ${rec.change.to} ${rec.change.unit}`
+            : actionSummary(rec)}
+        </div>
         <p className="text-sm muted" style={{ marginTop: 'var(--s-2)' }}>
           {rec.rationale}
         </p>

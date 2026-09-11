@@ -11,7 +11,7 @@ import {
   useToast,
 } from '@/design-system';
 import { ScreenHeader } from '@/app/AppShell';
-import { useHistoryStore, useSettingsStore } from '@/app/store';
+import { useBikeStore, useHistoryStore, useSettingsStore } from '@/app/store';
 import { downloadFile } from '@/features/export/download';
 import { samplesToCsv, summaryToCsv, toJson } from '@/features/export/exporters';
 import { StandardResult } from './StandardResult';
@@ -27,7 +27,8 @@ export function AnalysisPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const { open, updateMeta } = useHistoryStore();
+  const { open, updateMeta, learning } = useHistoryStore();
+  const activeBike = useBikeStore((s) => s.activeBike());
   const { mode, update: updateSettings } = useSettingsStore();
 
   const [data, setData] = useState<{ session: Session; report: AnalysisReport } | null>(null);
@@ -115,10 +116,15 @@ export function AnalysisPage() {
         />
 
         {mode === 'standard' ? (
-          <StandardResult report={report} />
+          <StandardResult report={report} bike={activeBike ?? undefined} learning={learning} />
         ) : (
           <>
-            <StandardResult report={report} maxRecommendations={3} />
+            <StandardResult
+              report={report}
+              bike={activeBike ?? undefined}
+              learning={learning}
+              maxRecommendations={3}
+            />
             <Suspense fallback={<LoadingState label="Caricamento grafici…" />}>
               <ExpertResult session={session} report={report} />
             </Suspense>

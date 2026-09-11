@@ -11,7 +11,7 @@ connessione e ripresa.
 ```bash
 npm install
 npm run dev            # http://localhost:5173 → landing page; /app → applicazione
-npm test               # 249 test su motore, dati, trasporto, export e flussi UI
+npm test               # 272 test su motore, dati, trasporto, export e flussi UI
 npm run build          # build di produzione
 npm run build:preview  # demo in un unico file HTML, apribile senza server
 npm run build:pages    # build per GitHub Pages (usa BASE_PATH)
@@ -214,6 +214,34 @@ molla senza precarico  → valuta una molla diversa
 nessuna regolazione    → spiega il problema, non inventa una modifica
 ```
 
+### Dal consiglio all'azione
+
+Un consiglio che il rider non sa eseguire non vale niente, quindi ogni
+raccomandazione porta quattro cose oltre al titolo:
+
+- **Da quale valore a quale.** "Aggiungi 5 PSI" lascia i conti al rider al punto
+  di partenza della discesa; "da 180 a 185 PSI" si imposta e si verifica. Il
+  valore attuale l'app lo conosce gia'.
+- **Come si fa**, per chi non ha mai toccato quel registro. Dove la convenzione
+  non e' universale tra produttori, il testo rimanda all'incisione sul pezzo
+  invece di affermare un senso di rotazione che potrebbe essere sbagliato.
+- **Cosa dovresti sentire**, senza cui il rider non ha modo di giudicare se la
+  modifica ha aiutato.
+- **Un pulsante per registrarla**, che scrive la modifica nel setup. E' cio' che
+  chiude il ciclo: lo snapshot della run successiva e' corretto, il confronto
+  mostra cosa e' cambiato davvero e chi impara riceve una coppia di run pulita.
+
+Viene mostrata **una sola azione per volta**. Non e' minimalismo: cambiare due
+impostazioni insieme rende la run successiva non attribuibile, che e'
+esattamente cio' su cui si basano il confronto e le sensibilita' misurate.
+
+### Il testo e' generato, quindi lo e' anche la grammatica
+
+Le descrizioni sono composte a runtime e i due soggetti hanno genere diverso:
+"forcella" e' femminile, "posteriore" maschile. Gli accordi sono declinati e
+verificati da test, perche' "la forcella e' arrivato a fondo corsa" si legge
+come software rotto e si porta dietro la fiducia nel numero accanto.
+
 La stessa regola vale per i circuiti di smorzamento. Basse e alte velocità sono
 governate da manopole diverse, quindi il motore sceglie quella giusta per il
 comportamento osservato:
@@ -398,7 +426,7 @@ raggiunga chi sta provando l'app.
 
 ## 10. Test
 
-249 test, `npm test`.
+272 test, `npm test`.
 
 | Area | Copertura |
 | --- | --- |
@@ -410,6 +438,8 @@ raggiunga chi sta provando l'app.
 | Sag | calcolo su due canali, bande per stile, rifiuto della misura instabile, hardtail, consigli per aria/molla/precarico/nessuna regolazione, limite del passo |
 | Flusso sag | dispositivo assente, sag corretto, sag eccessivo con PSI indicati, rider che si muove, persistenza, canale che non legge la posizione |
 | Raccomandazioni | aria/molla/precarico/nessuna regolazione, scelta del circuito LS/HS, direzione e limiti delle modifiche, deduplica |
+| Azionabilità | valori di partenza e arrivo, nessun valore inventato quando l'attuale è ignoto, fine corsa del registro rispettato, circuito giusto, scrittura nel setup, hardtail e casi non applicabili |
+| Testo generato | accordo di genere su entrambi i componenti, nessun segnaposto, maiuscola iniziale |
 | Data layer | salvataggio, lettura, aggiornamento note, cancellazione a cascata, impostazioni, wipe |
 | Trasporto | connect, disconnect, calibrazione (ok e fallita), memoria piena, batteria scarica, pulsante fisico, trasferimento a chunk, **ripresa dopo caduta**, CRC |
 | Wi-Fi | comandi HTTP, mappatura dei codici di stato, dispositivo irraggiungibile, download con `Range`, **ripresa che riparte dai byte mancanti**, nessun timer lasciato attivo, blocco del contenuto misto |

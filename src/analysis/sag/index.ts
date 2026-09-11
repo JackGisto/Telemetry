@@ -116,7 +116,11 @@ function channelResult(
   };
 }
 
-const NAME: Record<SuspensionComponent, string> = { front: 'forcella', rear: 'posteriore' };
+/** Inflected for Italian gender agreement; see the note in `recommendations`. */
+const ON: Record<SuspensionComponent, string> = {
+  front: 'sulla forcella',
+  rear: 'sul posteriore',
+};
 const OF: Record<SuspensionComponent, string> = {
   front: 'alla forcella',
   rear: 'al posteriore',
@@ -211,7 +215,7 @@ export function sagAdvice(
             component: channel.component,
             direction: tooSoft ? 'stiffer' : 'softer',
           },
-          title: `Valuta una molla più ${tooSoft ? 'dura' : 'morbida'} sul ${NAME[channel.component]}`,
+          title: `Valuta una molla più ${tooSoft ? 'dura' : 'morbida'} ${ON[channel.component]}`,
           rationale: `${observed} Senza precarico regolabile, il sag si corregge solo cambiando molla.`,
         },
         unit,

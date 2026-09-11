@@ -190,3 +190,74 @@
 .compare-grid__row-label { color: var(--c-text-muted); }
 .delta-up { color: var(--c-ok); }
 .delta-down { color: var(--c-danger); }
+
+/* ---------- The one action to take ---------- */
+/*
+  The start and end values are the most important thing on the analysis screen,
+  so they are set as a figure rather than as running text.
+*/
+.change {
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--c-accent-dim);
+  border: 1px solid var(--c-accent);
+}
+.change__label {
+  display: block;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--c-accent);
+  font-weight: var(--fw-semibold);
+  margin-bottom: var(--s-2);
+}
+.change__values {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.change__from {
+  font-size: 1.4rem;
+  color: var(--c-text-faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.change__arrow { color: var(--c-text-muted); font-size: 1.2rem; }
+.change__to {
+  font-size: 2rem;
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+}
+.change__unit { font-size: 0.75em; font-weight: var(--fw-medium); color: var(--c-text-muted); }
+
+.expect {
+  padding: var(--s-3) var(--s-4);
+  border-left: 3px solid var(--c-border-strong);
+  font-size: var(--fs-sm);
+  color: var(--c-text-muted);
+}
+.expect__label {
+  display: block;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+  font-weight: var(--fw-semibold);
+  margin-bottom: var(--s-1);
+}
+
+/* What the rider's own history taught the engine. */
+.learned {
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--c-surface-2);
+  border: 1px dashed var(--c-border-strong);
+}
+.learned__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--fs-sm);
+}

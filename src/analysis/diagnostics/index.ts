@@ -21,6 +21,19 @@ export interface DiagnosticContext {
 const LABEL: Record<SuspensionComponent, string> = { front: 'La forcella', rear: 'Il posteriore' };
 
 /**
+ * Italian adjectives and past participles agree with the subject's gender, and
+ * the two subjects here differ: "forcella" is feminine, "posteriore" masculine.
+ * The descriptions are generated, so the agreement has to be too, otherwise the
+ * app tells the rider "la forcella e' arrivato a fondo corsa".
+ *
+ * Only regular -o/-a forms are used in these strings, which this covers.
+ */
+function agree(component: SuspensionComponent, masculineForm: string): string {
+  if (component === 'rear') return masculineForm;
+  return masculineForm.replace(/o$/, 'a');
+}
+
+/**
  * Turn "how far outside the target band" into a severity.
  * `error` is expressed in the same unit as the band itself.
  */
@@ -88,7 +101,7 @@ function travelRules(m: ComponentMetrics, ctx: DiagnosticContext): Diagnosis[] {
       metric: 'meanTravelPct',
       metricValue: round(m.meanTravelPct, 1),
       threshold: win.meanTravelPct[0],
-      description: `${label} resta alto nella corsa: assorbe poco le asperità piccole.`,
+      description: `${label} resta ${agree(m.component, 'alto')} nella corsa: assorbe poco le asperità piccole.`,
     });
   } else if (meanErr > 0) {
     out.push({
@@ -99,7 +112,7 @@ function travelRules(m: ComponentMetrics, ctx: DiagnosticContext): Diagnosis[] {
       metric: 'meanTravelPct',
       metricValue: round(m.meanTravelPct, 1),
       threshold: win.meanTravelPct[1],
-      description: `${label} viaggia affondato nella corsa e ha poco margine sui colpi forti.`,
+      description: `${label} viaggia ${agree(m.component, 'affondato')} nella corsa e ha poco margine sui colpi forti.`,
     });
   }
 
@@ -124,7 +137,7 @@ function bottomOutRules(m: ComponentMetrics, ctx: DiagnosticContext): Diagnosis[
       metric: 'bottomOutPerMin',
       metricValue: round(perMin, 2),
       threshold: win.bottomOutPerMin[1],
-      description: `${label} è arrivato a fondo corsa ${m.bottomOutCount} volte: troppe per una guida ${ctx.style.label.toLowerCase()}.`,
+      description: `${label} è ${agree(m.component, 'arrivato')} a fondo corsa ${m.bottomOutCount} volte: troppe per lo stile ${ctx.style.label.toLowerCase()}.`,
     });
   }
 
@@ -206,7 +219,7 @@ function dampingRules(m: ComponentMetrics, ctx: DiagnosticContext): Diagnosis[] 
       metric: 'highSpeedCompressionFraction',
       metricValue: round(hsc, 3),
       threshold: ctx.tunables.highSpeedCompressionMax,
-      description: `${label} affronta molti colpi secchi ad alta velocità di stelo: sui tratti rotti risulta dura.`,
+      description: `${label} affronta molti colpi secchi ad alta velocità di stelo: sui tratti rotti risulta ${agree(m.component, 'duro')}.`,
     });
   }
 
@@ -250,7 +263,7 @@ function rideHeightRules(m: ComponentMetrics, ctx: DiagnosticContext): Diagnosis
       metric: 'rideHeightPct',
       metricValue: round(m.rideHeightPct, 1),
       threshold: ctx.style.rideHeightPct[1],
-      description: `${LABEL[m.component]} viaggia seduto al ${Math.round(m.rideHeightPct)}% della corsa: manca sostegno alle basse velocità e la bici perde geometria.`,
+      description: `${LABEL[m.component]} viaggia ${agree(m.component, 'seduto')} al ${Math.round(m.rideHeightPct)}% della corsa: manca sostegno alle basse velocità e la bici perde geometria.`,
     },
   ];
 }
