@@ -11,6 +11,7 @@ import type {
 import type { StyleProfile, Tunables } from '../tunables';
 import { DEFAULT_TUNABLES } from '../tunables';
 import { clamp, mean, round } from '../metrics/signal';
+import { changeFor, expectFor, howToFor } from '../recommendations/practical';
 
 /**
  * Static sag: measurement, verdict and advice.
@@ -134,6 +135,19 @@ export function sagAdvice(
 ): SagAdvice[] {
   const advice: SagAdvice[] = [];
 
+  /** Derive the practical half once, so no branch can omit it. */
+  const add = (
+    partial: Omit<SagAdvice, 'change' | 'howTo' | 'expect'>,
+    unit: SuspensionConfig,
+  ) => {
+    advice.push({
+      ...partial,
+      change: changeFor(partial.action, unit),
+      howTo: howToFor(partial.action),
+      expect: expectFor(partial.action),
+    });
+  };
+
   for (const channel of measurement.channels) {
     if (channel.verdict === 'correct' || channel.verdict === 'unknown') continue;
     const unit = unitFor(bike, channel.component);
@@ -154,51 +168,67 @@ export function sagAdvice(
         1,
         tunables.maxPsiStep[channel.component],
       );
-      advice.push({
-        component: channel.component,
-        action: { kind: 'pressure', component: channel.component, deltaPsi: tooSoft ? step : -step },
-        title: `${tooSoft ? 'Aggiungi' : 'Togli'} ${step} PSI ${OF[channel.component]}`,
-        rationale: `${observed} La pressione è la regolazione che sposta direttamente il sag.`,
-      });
+      add(
+        {
+          component: channel.component,
+          action: {
+            kind: 'pressure',
+            component: channel.component,
+            deltaPsi: tooSoft ? step : -step,
+          },
+          title: `${tooSoft ? 'Aggiungi' : 'Togli'} ${step} PSI ${OF[channel.component]}`,
+          rationale: `${observed} La pressione è la regolazione che sposta direttamente il sag.`,
+        },
+        unit,
+      );
       continue;
     }
 
     if (unit.preload?.available) {
       const turns = clamp(Math.round(Math.abs(errorPoints) / 4), 1, 3) * 0.5;
-      advice.push({
-        component: channel.component,
-        action: {
-          kind: 'preload',
+      add(
+        {
           component: channel.component,
-          deltaTurns: tooSoft ? turns : -turns,
+          action: {
+            kind: 'preload',
+            component: channel.component,
+            deltaTurns: tooSoft ? turns : -turns,
+          },
+          title: `${tooSoft ? 'Aumenta' : 'Riduci'} il precarico ${OF[channel.component]} di ${turns} giri`,
+          rationale: `${observed} Il precarico alza o abbassa la bici senza cambiare la durezza della molla.`,
         },
-        title: `${tooSoft ? 'Aumenta' : 'Riduci'} il precarico ${OF[channel.component]} di ${turns} giri`,
-        rationale: `${observed} Il precarico alza o abbassa la bici senza cambiare la durezza della molla.`,
-      });
+        unit,
+      );
       continue;
     }
 
     if (unit.springType === 'coil') {
-      advice.push({
-        component: channel.component,
-        action: {
-          kind: 'spring-rate',
+      add(
+        {
           component: channel.component,
-          direction: tooSoft ? 'stiffer' : 'softer',
+          action: {
+            kind: 'spring-rate',
+            component: channel.component,
+            direction: tooSoft ? 'stiffer' : 'softer',
+          },
+          title: `Valuta una molla più ${tooSoft ? 'dura' : 'morbida'} sul ${NAME[channel.component]}`,
+          rationale: `${observed} Senza precarico regolabile, il sag si corregge solo cambiando molla.`,
         },
-        title: `Valuta una molla più ${tooSoft ? 'dura' : 'morbida'} sul ${NAME[channel.component]}`,
-        rationale: `${observed} Senza precarico regolabile, il sag si corregge solo cambiando molla.`,
-      });
+        unit,
+      );
       continue;
     }
 
     // Nothing adjustable: say so rather than invent a knob.
-    advice.push({
-      component: channel.component,
-      action: { kind: 'explain', component: channel.component },
-      title: `Il sag ${OF[channel.component]} è fuori intervallo`,
-      rationale: `${observed} Questa sospensione non ha regolazioni che permettano di correggerlo.`,
-    });
+    add(
+      {
+        component: channel.component,
+        action: { kind: 'explain', component: channel.component },
+        title: `Il sag ${OF[channel.component]} è fuori intervallo`,
+        rationale: `${observed} Questa sospensione non ha regolazioni che permettano di correggerlo.`,
+      },
+      unit,
+    );
   }
 
   return advice;

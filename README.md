@@ -11,7 +11,7 @@ connessione e ripresa.
 ```bash
 npm install
 npm run dev            # http://localhost:5173 → landing page; /app → applicazione
-npm test               # 220 test su motore, dati, trasporto, export e flussi UI
+npm test               # 249 test su motore, dati, trasporto, export e flussi UI
 npm run build          # build di produzione
 npm run build:preview  # demo in un unico file HTML, apribile senza server
 npm run build:pages    # build per GitHub Pages (usa BASE_PATH)
@@ -232,6 +232,18 @@ seconda. È verificato da test dedicati.
 millimetri è isolata qui. Il motore riceve solo millimetri, quindi cambiare
 sensore o encoding non lo tocca.
 
+**Modello del sensore** (`data/sensor.ts`): i sensori sono potenziometri
+lineari, e la curva segnale-posizione dipende dal cablaggio. Sbagliarla non
+produce un'app visibilmente rotta, produce numeri plausibili e sbagliati a metà
+corsa, che poi sono sbagliati in ogni metrica e in ogni consiglio. Per questo è
+modellata esplicitamente invece di essere assunta lineare.
+
+**Canali aggiuntivi:** `RawSample.extra` è una mappa aperta, non campi con nome.
+Quando si aggiungerà un sensore inerziale o di velocità, i campioni lo portano e
+codec, storage, export e confronto continuano a funzionare senza modifiche. Il
+motore ignora le chiavi che non conosce, quindi un canale non riconosciuto è
+inerte e non rompe una run.
+
 **Tuning:** soglie, pesi, severità e profili di stile stanno tutti in
 `analysis/tunables.ts` e possono essere sovrascritti per singola analisi.
 
@@ -286,6 +298,7 @@ isolato e marcato `FIRMWARE TBD`:
 | `transport/protocol/codec.ts` | Formato del payload di sessione (oggi JSON + CRC32). |
 | `transport/ble/BleTelemetryTransport.ts` | Layout dei pacchetti di stato e di dati; `calibrate()` e `listSessions()` sollevano `not-supported` finché il firmware non li definisce. |
 | `data/normalize.ts` | Risoluzione e fondo scala dell'ADC. |
+| `data/sensor.ts` | **Come sono cablati i potenziometri.** A tre fili la risposta e' lineare in posizione; a due fili con resistenza fissa e' iperbolica, e calibrare i soli estremi lascia il centro della corsa sbagliato di diversi punti. Il modello e' selezionabile e il default e' ratiometrico. Servono i valori dei componenti se il cablaggio e' il secondo. |
 
 Quando il protocollo sarà congelato si cambiano queste costanti: nessun altro
 livello va toccato.
@@ -385,12 +398,14 @@ raggiunga chi sta provando l'app.
 
 ## 10. Test
 
-220 test, `npm test`.
+249 test, `npm test`.
 
 | Area | Copertura |
 | --- | --- |
 | Motore | conversione posizione, percentuali, istogramma, bottom-out, rebound, compressione, scoring, diagnosi, determinismo, hardtail, run non analizzabili |
 | Velocità e assetto | normalizzazione dell'istogramma, segno di ritorno e compressione, valori fuori scala, split alla soglia, altezza di marcia non falsata dai colpi |
+| Sensori | potenziometro a tre fili lineare, a due fili monotono e non lineare, resistenza fissa su entrambi i lati, saturazione agli estremi, calibrazioni degeneri |
+| Apprendimento | attribuzione con una sola modifica per volta, rifiuto quando ne cambiano due, run troppo brevi, ordinamento per data, bici separate, osservazioni contraddittorie scartate |
 | Regole di smorzamento | durezza sui colpi, impaccamento, sostegno alle basse velocità, silenzio quando i dati non bastano e quando la diagnosi sarebbe un doppione |
 | Sag | calcolo su due canali, bande per stile, rifiuto della misura instabile, hardtail, consigli per aria/molla/precarico/nessuna regolazione, limite del passo |
 | Flusso sag | dispositivo assente, sag corretto, sag eccessivo con PSI indicati, rider che si muove, persistenza, canale che non legge la posizione |

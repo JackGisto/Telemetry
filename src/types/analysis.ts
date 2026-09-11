@@ -162,6 +162,21 @@ export type RecommendationAction =
   | { kind: 'spring-rate'; component: SuspensionComponent; direction: 'softer' | 'stiffer' }
   | { kind: 'explain'; component: SuspensionComponent | 'system' };
 
+/**
+ * The concrete before-and-after of a change.
+ *
+ * "Add 5 PSI" leaves the rider doing arithmetic at the trailhead; "from 180 to
+ * 185 PSI" is something they can set and verify. The app already knows the
+ * current value, so there is no reason to make them work it out.
+ */
+export interface SettingChange {
+  from: number;
+  to: number;
+  unit: string;
+  /** Name of the adjuster, as the rider sees it on the suspension. */
+  label: string;
+}
+
 export interface Recommendation {
   id: string;
   /** Higher runs first. Derived from severity x confidence. */
@@ -169,8 +184,14 @@ export interface Recommendation {
   action: RecommendationAction;
   /** One-line imperative instruction shown in Standard mode. */
   title: string;
+  /** Concrete start and end values, when the app knows the current setting. */
+  change: SettingChange | null;
   /** Why, in one or two sentences. Shown on expand / in Expert mode. */
   rationale: string;
+  /** How to physically perform the change, for someone who never has. */
+  howTo: string[];
+  /** What should feel different afterwards, so the rider can judge the result. */
+  expect: string;
   /** The diagnoses this recommendation answers. */
   causes: DiagnosisId[];
 }

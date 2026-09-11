@@ -223,3 +223,24 @@ describe('selezione del trasporto', () => {
     expect(message.body).toMatch(/scarica/i);
   });
 });
+
+describe('canali aggiuntivi', () => {
+  it('conserva nel round-trip un canale che l’app non analizza', () => {
+    // A run from newer hardware must survive storage and export intact, even
+    // before the engine has any rule that reads the new channel.
+    const withGyro = {
+      sessionId: 'sess-2',
+      startedAt: '2026-01-01T10:00:00.000Z',
+      sampleRateHz: 100,
+      samples: [
+        { t: 0, frontMm: 10, rearMm: 4, extra: { pitchDeg: -2.5, wheelSpeedKmh: 18 } },
+        { t: 10, frontMm: 12, rearMm: 5 },
+      ],
+    };
+
+    const decoded = decodeSessionPayload(encodeSessionPayload(withGyro));
+    expect(decoded.samples[0].extra).toEqual({ pitchDeg: -2.5, wheelSpeedKmh: 18 });
+    // A sample without extra channels stays without them, not an empty object.
+    expect(decoded.samples[1].extra).toBeUndefined();
+  });
+});

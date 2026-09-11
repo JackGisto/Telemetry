@@ -1,4 +1,5 @@
 import type { BikeConfig, CalibrationResult, RawSample } from '@/types';
+import { DEFAULT_SENSOR_MODEL, positionFraction, type SensorModel } from './sensor';
 
 /**
  * ADC -> millimetres adapter.
@@ -10,6 +11,10 @@ import type { BikeConfig, CalibrationResult, RawSample } from '@/types';
  * FIRMWARE TBD: `fullScaleRaw` is the count the device reports at full sensor
  * extension. Until the firmware freezes its ADC resolution and scaling, it is
  * read from the calibration result or falls back to `DEFAULT_FULL_SCALE_RAW`.
+ *
+ * The sensors are linear potentiometers, so the raw-to-position curve depends
+ * on how they are wired; that shape lives in `sensor.ts` and is selected by the
+ * `SensorModel` passed in here.
  */
 export const DEFAULT_FULL_SCALE_RAW = 4095;
 
@@ -25,6 +30,8 @@ export interface ChannelCalibration {
 export interface DecodeCalibration {
   front: ChannelCalibration;
   rear: ChannelCalibration | null;
+  /** How the potentiometer's signal maps to position. Defaults to linear. */
+  sensorModel?: SensorModel;
 }
 
 /** normalized 0..1 -> mm, per section 17 of the spec. */
@@ -37,12 +44,19 @@ export function travelPercentage(positionMm: number, totalTravelMm: number): num
   return (positionMm / totalTravelMm) * 100;
 }
 
-/** Raw ADC counts -> normalised 0..1, clamped to the calibrated range. */
-export function normalizeRaw(raw: number, cal: ChannelCalibration): number {
-  const span = cal.fullRaw - cal.zeroRaw;
-  if (span === 0) return 0;
-  const n = (raw - cal.zeroRaw) / span;
-  return n < 0 ? 0 : n > 1 ? 1 : n;
+/**
+ * Raw ADC counts -> normalised 0..1, clamped to the calibrated range.
+ *
+ * Delegates the curve to the sensor model so a two-wire wiring, whose response
+ * is not linear in position, is handled properly instead of being approximated
+ * by its endpoints.
+ */
+export function normalizeRaw(
+  raw: number,
+  cal: ChannelCalibration,
+  model: SensorModel = DEFAULT_SENSOR_MODEL,
+): number {
+  return positionFraction(raw, cal, model);
 }
 
 export function decodeSample(
@@ -51,12 +65,13 @@ export function decodeSample(
   rearRaw: number | null,
   cal: DecodeCalibration,
 ): RawSample {
+  const model = cal.sensorModel ?? DEFAULT_SENSOR_MODEL;
   return {
     t,
-    frontMm: positionMm(normalizeRaw(frontRaw, cal.front), cal.front.totalTravelMm),
+    frontMm: positionMm(normalizeRaw(frontRaw, cal.front, model), cal.front.totalTravelMm),
     rearMm:
       rearRaw !== null && cal.rear
-        ? positionMm(normalizeRaw(rearRaw, cal.rear), cal.rear.totalTravelMm)
+        ? positionMm(normalizeRaw(rearRaw, cal.rear, model), cal.rear.totalTravelMm)
         : null,
   };
 }
@@ -65,6 +80,7 @@ export function decodeSample(
 export function calibrationFor(
   bike: BikeConfig,
   calibration: CalibrationResult | null,
+  sensorModel: SensorModel = DEFAULT_SENSOR_MODEL,
 ): DecodeCalibration {
   const channel = (component: 'front' | 'rear', totalTravelMm: number): ChannelCalibration => {
     const found = calibration?.channels.find((c) => c.component === component);
@@ -79,5 +95,6 @@ export function calibrationFor(
     rear: bike.rearSuspension.present
       ? channel('rear', bike.rearSuspension.totalTravelMm)
       : null,
+    sensorModel,
   };
 }

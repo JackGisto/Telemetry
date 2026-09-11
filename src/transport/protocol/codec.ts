@@ -42,6 +42,9 @@ export function encodeSessionPayload(payload: SessionPayload): ArrayBuffer {
         t: s.t,
         f: Math.round(s.frontMm * 100) / 100,
         r: s.rearMm === null ? null : Math.round(s.rearMm * 100) / 100,
+        // Channels the app does not analyse still survive the round trip, so a
+        // run from newer hardware is never silently truncated.
+        ...(s.extra ? { x: s.extra } : {}),
       })),
     }),
   );
@@ -66,7 +69,7 @@ export function decodeSessionPayload(buffer: ArrayBuffer): SessionPayload {
     sessionId: string;
     startedAt: string;
     sampleRateHz: number;
-    samples: Array<{ t: number; f: number; r: number | null }>;
+    samples: Array<{ t: number; f: number; r: number | null; x?: Record<string, number> }>;
   };
   try {
     parsed = JSON.parse(new TextDecoder().decode(body));
@@ -78,6 +81,11 @@ export function decodeSessionPayload(buffer: ArrayBuffer): SessionPayload {
     sessionId: parsed.sessionId,
     startedAt: parsed.startedAt,
     sampleRateHz: parsed.sampleRateHz,
-    samples: parsed.samples.map((s) => ({ t: s.t, frontMm: s.f, rearMm: s.r })),
+    samples: parsed.samples.map((s) => ({
+      t: s.t,
+      frontMm: s.f,
+      rearMm: s.r,
+      ...(s.x ? { extra: s.x } : {}),
+    })),
   };
 }

@@ -4,4 +4,7 @@ export { computeMetrics } from './metrics';
 export { runDiagnostics } from './diagnostics';
 export { computeScores, verdictFor, balanceVerdictFor } from './scoring';
 export { buildRecommendations } from './recommendations';
+export * from './recommendations/apply';
+export * from './recommendations/practical';
 export * from './sag';
+export * from './learning';

@@ -12,6 +12,8 @@ import type {
 import type { StyleProfile, Tunables } from '../tunables';
 import { clamp, round } from '../metrics/signal';
 import { bandError } from '../diagnostics';
+import { changeFor, expectFor, howToFor } from './practical';
+import { findSensitivity, type Sensitivity } from '../learning';
 
 /**
  * Turns diagnoses into concrete adjustments.
@@ -38,10 +40,19 @@ function springAction(
   direction: 'softer' | 'stiffer',
   travelErrorPoints: number,
   tunables: Tunables,
-): { action: RecommendationAction; title: string } {
+  sensitivities?: Sensitivity[],
+): { action: RecommendationAction; title: string; learned: boolean } {
   if (hasPressure(unit)) {
+    // A measured rate says how many points of travel one PSI actually moves on
+    // this bike; invert it to get the PSI needed to close the gap.
+    const learned = findSensitivity(sensitivities ?? [], 'pressure', component);
+    const psiPerPoint =
+      learned && Math.abs(learned.perUnit) > 0.01
+        ? 1 / Math.abs(learned.perUnit)
+        : tunables.psiPerTravelPoint[component];
+
     const step = clamp(
-      Math.round(Math.abs(travelErrorPoints) * tunables.psiPerTravelPoint[component]),
+      Math.round(Math.abs(travelErrorPoints) * psiPerPoint),
       1,
       tunables.maxPsiStep[component],
     );
@@ -52,6 +63,7 @@ function springAction(
         direction === 'stiffer'
           ? `Aggiungi ${step} PSI ${component === 'front' ? 'alla forcella' : 'al posteriore'}`
           : `Togli ${step} PSI ${component === 'front' ? 'alla forcella' : 'al posteriore'}`,
+      learned: learned !== null,
     };
   }
 
@@ -64,6 +76,7 @@ function springAction(
         direction === 'stiffer'
           ? `Aumenta il precarico ${component === 'front' ? 'della forcella' : 'del posteriore'} di ${turns} giri`
           : `Riduci il precarico ${component === 'front' ? 'della forcella' : 'del posteriore'} di ${turns} giri`,
+      learned: false,
     };
   }
 
@@ -72,12 +85,14 @@ function springAction(
     return {
       action: { kind: 'spring-rate', component, direction },
       title: `Valuta una molla più ${direction === 'stiffer' ? 'dura' : 'morbida'} sul ${NAME[component]}`,
+      learned: false,
     };
   }
 
   return {
     action: { kind: 'explain', component },
     title: `Il ${NAME[component]} lavora fuori range, ma non ha regolazioni disponibili`,
+    learned: false,
   };
 }
 
@@ -189,6 +204,14 @@ export interface RecommendationContext {
   metrics: SessionMetrics;
   style: StyleProfile;
   tunables: Tunables;
+  /**
+   * Response rates measured from the rider's own history.
+   *
+   * When one covers the adjuster in question it replaces the generic constant:
+   * a step derived from what this bike actually did beats a step derived from
+   * an average of every bike.
+   */
+  sensitivities?: Sensitivity[];
 }
 
 export function buildRecommendations(
@@ -197,6 +220,22 @@ export function buildRecommendations(
 ): Recommendation[] {
   const out: Recommendation[] = [];
   const seen = new Set<string>();
+
+  /**
+   * Fill in the practical fields from the action itself.
+   *
+   * Derived in one place so no branch above can produce a recommendation
+   * without a start value, a how-to and an expected outcome.
+   */
+  const complete = (
+    rec: Omit<Recommendation, 'change' | 'howTo' | 'expect'>,
+    unit: SuspensionConfig,
+  ): Recommendation => ({
+    ...rec,
+    change: changeFor(rec.action, unit),
+    howTo: howToFor(rec.action),
+    expect: expectFor(rec.action),
+  });
 
   const push = (rec: Recommendation) => {
     // One recommendation per (kind, component): merge causes instead of repeating.
@@ -228,15 +267,24 @@ export function buildRecommendations(
           d.id === 'insufficient-travel-use'
             ? bandError(m.maxTravelPct, win.maxTravelPct)
             : bandError(m.meanTravelPct, win.meanTravelPct);
-        const { action, title } = springAction(unit, component, 'softer', error, ctx.tunables);
-        push({
+        const { action, title, learned } = springAction(
+          unit,
+          component,
+          'softer',
+          error,
+          ctx.tunables,
+          ctx.sensitivities,
+        );
+        push(complete({
           id: '',
           priority,
           action,
           title,
-          rationale: `${d.description} Ammorbidire il ${NAME[component]} gli permette di usare più corsa e di copiare meglio il terreno.`,
+          rationale: `${d.description} Ammorbidire il ${NAME[component]} gli permette di usare più corsa e di copiare meglio il terreno.${
+            learned ? ' La quantità è calcolata su come la tua bici ha risposto alle modifiche precedenti.' : ''
+          }`,
           causes: [d.id],
-        });
+        }, unit));
         break;
       }
 
@@ -248,29 +296,38 @@ export function buildRecommendations(
           d.id === 'suspension-riding-low'
             ? bandError(m.meanTravelPct, win.meanTravelPct)
             : Math.max(bandError(m.maxTravelPct, win.maxTravelPct), 4);
-        const { action, title } = springAction(unit, component, 'stiffer', error, ctx.tunables);
-        push({
+        const { action, title, learned } = springAction(
+          unit,
+          component,
+          'stiffer',
+          error,
+          ctx.tunables,
+          ctx.sensitivities,
+        );
+        push(complete({
           id: '',
           priority,
           action,
           title,
-          rationale: `${d.description} Irrigidire il ${NAME[component]} recupera margine sul finale di corsa.`,
+          rationale: `${d.description} Irrigidire il ${NAME[component]} recupera margine sul finale di corsa.${
+            learned ? ' La quantità è calcolata su come la tua bici ha risposto alle modifiche precedenti.' : ''
+          }`,
           causes: [d.id],
-        });
+        }, unit));
 
         // When there is no spring-side knob left, low-speed compression is the
         // next best lever, if the unit has it.
         if (action.kind === 'explain') {
           const comp = compressionAction(unit, component);
           if (comp) {
-            push({
+            push(complete({
               id: '',
               priority: priority - 0.1,
               action: comp.action,
               title: comp.title,
               rationale: `Senza regolazioni sulla molla, un click di compressione in più sostiene il ${NAME[component]} a metà corsa.`,
               causes: [d.id],
-            });
+            }, unit));
           }
         }
         break;
@@ -280,23 +337,23 @@ export function buildRecommendations(
         // Sharp impacts are the high-speed compression circuit's job.
         const rec = compressionAction(unit, component, 'softer', 2, 'high-speed');
         if (rec) {
-          push({
+          push(complete({
             id: '',
             priority,
             action: rec.action,
             title: rec.title,
             rationale: `${d.description} Aprire la compressione alle alte velocità lascia passare i colpi secchi senza toccare il sostegno in curva.`,
             causes: [d.id],
-          });
+          }, unit));
         } else {
-          push({
+          push(complete({
             id: '',
             priority: priority - 0.5,
             action: { kind: 'explain', component },
             title: `Il ${NAME[component]} risulta duro sui colpi secchi`,
             rationale: `${d.description} Questa sospensione non ha una regolazione della compressione, quindi la strada resta ammorbidire la molla.`,
             causes: [d.id],
-          });
+          }, unit));
         }
         break;
       }
@@ -305,14 +362,14 @@ export function buildRecommendations(
         // Not recovering between hits is a rebound problem, not a spring one.
         const rec = reboundAction(unit, component, 'faster', 0.12, ctx.tunables, 'low-speed');
         if (rec) {
-          push({
+          push(complete({
             id: '',
             priority,
             action: rec.action,
             title: rec.title,
             rationale: `${d.description} Un ritorno più rapido le permette di riestendersi tra un colpo e l'altro.`,
             causes: [d.id],
-          });
+          }, unit));
         }
         break;
       }
@@ -322,24 +379,24 @@ export function buildRecommendations(
         // spring, which would also change how the unit uses the whole stroke.
         const rec = compressionAction(unit, component, 'firmer', 2, 'low-speed');
         if (rec) {
-          push({
+          push(complete({
             id: '',
             priority,
             action: rec.action,
             title: rec.title,
             rationale: `${d.description} Chiudere la compressione alle basse velocità alza la bici senza irrigidirla sui colpi forti.`,
             causes: [d.id],
-          });
+          }, unit));
         } else {
-          const spring = springAction(unit, component, 'stiffer', 5, ctx.tunables);
-          push({
+          const spring = springAction(unit, component, 'stiffer', 5, ctx.tunables, ctx.sensitivities);
+          push(complete({
             id: '',
             priority: priority - 0.1,
             action: spring.action,
             title: spring.title,
             rationale: `${d.description} Senza regolazione di compressione, l'unica leva è irrigidire la molla.`,
             causes: [d.id],
-          });
+          }, unit));
         }
         break;
       }
@@ -355,23 +412,23 @@ export function buildRecommendations(
           ctx.tunables,
         );
         if (rec) {
-          push({
+          push(complete({
             id: '',
             priority,
             action: rec.action,
             title: rec.title,
             rationale: `${d.description} Il rebound controlla la velocità con cui la sospensione torna estesa.`,
             causes: [d.id],
-          });
+          }, unit));
         } else {
-          push({
+          push(complete({
             id: '',
             priority: priority - 0.5,
             action: { kind: 'explain', component },
             title: `Il ritorno del ${NAME[component]} è fuori range`,
             rationale: `${d.description} Questa sospensione non ha una regolazione del rebound, quindi non c'è una modifica da fare.`,
             causes: [d.id],
-          });
+          }, unit));
         }
         break;
       }

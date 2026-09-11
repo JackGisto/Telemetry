@@ -5,6 +5,7 @@ import { balanceVerdictFor, computeScores, verdictFor } from './scoring';
 import { buildRecommendations } from './recommendations';
 import { clamp } from './metrics/signal';
 import { DEFAULT_TUNABLES, withOverrides, type Tunables } from './tunables';
+import type { Sensitivity } from './learning';
 
 export const ENGINE_VERSION = '1.0.0';
 
@@ -13,6 +14,12 @@ export interface AnalyseOptions {
   tunables?: Partial<Tunables>;
   /** Bike config to analyse against. Defaults to the run's own snapshot. */
   bike?: BikeConfig;
+  /**
+   * Response rates learned from the rider's previous runs. When present the
+   * engine sizes its suggestions from what this bike actually did rather than
+   * from a generic constant.
+   */
+  sensitivities?: Sensitivity[];
 }
 
 /**
@@ -76,7 +83,13 @@ export function analyseSession(session: Session, options: AnalyseOptions = {}): 
   };
 
   const diagnoses = runDiagnostics(ctx);
-  const recommendations = buildRecommendations(diagnoses, { bike, metrics, style, tunables });
+  const recommendations = buildRecommendations(diagnoses, {
+    bike,
+    metrics,
+    style,
+    tunables,
+    sensitivities: options.sensitivities,
+  });
 
   return {
     sessionId: session.id,

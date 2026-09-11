@@ -1,4 +1,4 @@
-import type { RecommendationAction, Verdict } from './analysis';
+import type { RecommendationAction, SettingChange, Verdict } from './analysis';
 import type { SuspensionComponent } from './bike';
 
 /**
@@ -35,7 +35,13 @@ export interface SagAdvice {
   component: SuspensionComponent;
   action: RecommendationAction;
   title: string;
+  /** Concrete start and end values, when the current setting is known. */
+  change: SettingChange | null;
   rationale: string;
+  /** How to physically perform the change. */
+  howTo: string[];
+  /** What should feel different afterwards. */
+  expect: string;
 }
 
 /** An instantaneous position reading, the primitive the sag procedure needs. */

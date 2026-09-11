@@ -34,7 +34,14 @@ function balanceMetrics(front: ComponentMetrics, rear: ComponentMetrics): Balanc
   };
 }
 
-/** Compute every metric for one run. Pure: no I/O, no React, no globals. */
+/**
+ * Compute every metric for one run. Pure: no I/O, no React, no globals.
+ *
+ * Only the two position channels are read. Any additional channel carried in
+ * `RawSample.extra` is ignored here by design: a sensor the engine has no rules
+ * for must not change the result, and adding rules for one later is a new
+ * module rather than a change to this one.
+ */
 export function computeMetrics(
   samples: RawSample[],
   bike: BikeConfig,
