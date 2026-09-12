@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IDBFactory } from 'fake-indexeddb';
 import type { HealthSample, RiderHealthProfile } from '@/types';
@@ -189,8 +189,12 @@ describe('accesso', () => {
 
     await user.click(await screen.findByRole('button', { name: /continua senza account/i }));
 
-    const account = useAccountStore.getState().account;
-    expect(account?.provider).toBe('local');
+    // Sign-in writes to IndexedDB before updating the store, so the assertion
+    // has to wait for it. Reading the store straight after the click passed on
+    // a fast machine and failed in CI.
+    await waitFor(() => {
+      expect(useAccountStore.getState().account?.provider).toBe('local');
+    });
     expect(await screen.findByText(/account locale/i)).toBeInTheDocument();
   });
 
